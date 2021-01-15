@@ -15,25 +15,36 @@
 #define WIFI_STATE_WPS              4
 #define WIFI_STATE_SMARTCONFIG      8
 
+// -----------------------------------------------------------------------------
+// GPIO
+// -----------------------------------------------------------------------------
+
+#define GPIO_NONE           0x99
+
+#define GPIO_TYPE_NONE          GpioType::None
+#define GPIO_TYPE_HARDWARE      GpioType::Hardware
+#define GPIO_TYPE_MCP23S08      GpioType::Mcp23s08
+
 //------------------------------------------------------------------------------
 // BUTTONS
 //------------------------------------------------------------------------------
 
-// button actions, limited to 4-bit number (0b1111 / 0xf / 15)
-#define BUTTON_ACTION_NONE            0u
-#define BUTTON_ACTION_TOGGLE          1u
-#define BUTTON_ACTION_ON              2u
-#define BUTTON_ACTION_OFF             3u
-#define BUTTON_ACTION_AP              4u
-#define BUTTON_ACTION_RESET           5u
-#define BUTTON_ACTION_PULSE           6u
-#define BUTTON_ACTION_FACTORY         7u
-#define BUTTON_ACTION_WPS             8u
-#define BUTTON_ACTION_SMART_CONFIG    9u
-#define BUTTON_ACTION_DIM_UP          10u
-#define BUTTON_ACTION_DIM_DOWN        11u
-#define BUTTON_ACTION_DISPLAY_ON      12u
-#define BUTTON_ACTION_MAX             15u
+#define BUTTON_ACTION_NONE            ButtonAction::None
+#define BUTTON_ACTION_TOGGLE          ButtonAction::Toggle
+#define BUTTON_ACTION_ON              ButtonAction::On
+#define BUTTON_ACTION_OFF             ButtonAction::Off
+#define BUTTON_ACTION_AP              ButtonAction::AccessPoint
+#define BUTTON_ACTION_RESET           ButtonAction::Reset
+#define BUTTON_ACTION_PULSE           ButtonAction::Pulse
+#define BUTTON_ACTION_FACTORY         ButtonAction::FactoryReset
+#define BUTTON_ACTION_WPS             ButtonAction::Wps
+#define BUTTON_ACTION_SMART_CONFIG    ButtonAction::SmartConfig
+#define BUTTON_ACTION_DIM_UP          ButtonAction::BrightnessIncrease
+#define BUTTON_ACTION_DIM_DOWN        ButtonAction::BrightnessDecrease
+#define BUTTON_ACTION_DISPLAY_ON      ButtonAction::DisplayOn
+#define BUTTON_ACTION_CUSTOM          ButtonAction::Custom
+
+#define BUTTON_ACTION_MAX             ButtonsActionMax
 
 // Deprecated: legacy mapping, changed to action from above
 #define BUTTON_MODE_NONE              BUTTON_ACTION_NONE
@@ -53,15 +64,16 @@
 // compat definitions for DebounceEvent
 #define BUTTON_PUSHBUTTON           ButtonMask::Pushbutton
 #define BUTTON_SWITCH               ButtonMask::Switch
+#define BUTTON_DEFAULT_LOW          ButtonMask::DefaultLow
 #define BUTTON_DEFAULT_HIGH         ButtonMask::DefaultHigh
+#define BUTTON_DEFAULT_BOOT         ButtonMask::DefaultBoot
 #define BUTTON_SET_PULLUP           ButtonMask::SetPullup
 #define BUTTON_SET_PULLDOWN         ButtonMask::SetPulldown
 
-// configure which type of event emitter is used
-#define BUTTON_EVENTS_SOURCE_GENERIC               0
-#define BUTTON_EVENTS_SOURCE_ITEAD_SONOFF_DUAL     1
-#define BUTTON_EVENTS_SOURCE_FOXEL_LIGHTFOX_DUAL   2
-#define BUTTON_EVENTS_SOURCE_MCP23S08              3
+// configure where do we get the button events
+#define BUTTON_PROVIDER_NONE        ButtonProvider::None
+#define BUTTON_PROVIDER_GPIO        ButtonProvider::Gpio
+#define BUTTON_PROVIDER_ANALOG      ButtonProvider::Analog
 
 //------------------------------------------------------------------------------
 // ENCODER
@@ -74,6 +86,8 @@
 // RELAY
 //------------------------------------------------------------------------------
 
+#define RELAY_NONE          0x99
+
 #define RELAY_BOOT_OFF              0
 #define RELAY_BOOT_ON               1
 #define RELAY_BOOT_SAME             2
@@ -81,10 +95,10 @@
 #define RELAY_BOOT_LOCKED_OFF       4
 #define RELAY_BOOT_LOCKED_ON        5
 
-#define RELAY_TYPE_NORMAL           0
-#define RELAY_TYPE_INVERSE          1
-#define RELAY_TYPE_LATCHED          2
-#define RELAY_TYPE_LATCHED_INVERSE  3
+#define RELAY_TYPE_NORMAL           RelayType::Normal
+#define RELAY_TYPE_INVERSE          RelayType::Inverse
+#define RELAY_TYPE_LATCHED          RelayType::Latched
+#define RELAY_TYPE_LATCHED_INVERSE  RelayType::LatchedInverse
 
 #define RELAY_SYNC_ANY              0
 #define RELAY_SYNC_NONE_OR_ONE      1
@@ -96,12 +110,14 @@
 #define RELAY_PULSE_OFF             1
 #define RELAY_PULSE_ON              2
 
-#define RELAY_PROVIDER_RELAY        0
-#define RELAY_PROVIDER_DUAL         1
-#define RELAY_PROVIDER_LIGHT        2
-#define RELAY_PROVIDER_RFBRIDGE     3
-#define RELAY_PROVIDER_STM          4
-#define RELAY_PROVIDER_MCP23S08     5
+#define RELAY_PROVIDER_NONE         RelayProvider::None
+#define RELAY_PROVIDER_DUMMY        RelayProvider::Dummy
+#define RELAY_PROVIDER_GPIO         RelayProvider::Gpio
+#define RELAY_PROVIDER_DUAL         RelayProvider::Dual
+#define RELAY_PROVIDER_STM          RelayProvider::Stm
+
+#define RFB_PROVIDER_RCSWITCH       0
+#define RFB_PROVIDER_EFM8BB1        1
 
 #define RELAY_GROUP_SYNC_NORMAL      0
 #define RELAY_GROUP_SYNC_INVERSE     1
@@ -196,7 +212,7 @@
 #define LIGHT_PROVIDER_NONE         0
 #define LIGHT_PROVIDER_MY92XX       1       // works with MY9291 and MY9231
 #define LIGHT_PROVIDER_DIMMER       2
-#define LIGHT_PROVIDER_TUYA         3
+#define LIGHT_PROVIDER_CUSTOM       3
 
 // -----------------------------------------------------------------------------
 // SCHEDULER
@@ -273,20 +289,6 @@
 #define UV_INDEX_EXTREME            4       // 11 or more means extreme risk of harm from unprotected sun exposure.
                                             // Take all precautions because unprotected skin and eyes can burn in minutes.
 
-//------------------------------------------------------------------------------
-// UNITS
-//------------------------------------------------------------------------------
-
-#define POWER_WATTS                 sensor::Unit::Watt
-#define POWER_KILOWATTS             sensor::Unit::Kilowatt
-
-#define ENERGY_JOULES               sensor::Unit::Joule
-#define ENERGY_KWH                  sensor::Unit::KilowattHour
-
-#define TMP_CELSIUS                 sensor::Unit::Celcius
-#define TMP_FAHRENHEIT              sensor::Unit::Farenheit
-#define TMP_KELVIN                  sensor::Unit::Kelvin
-
 //--------------------------------------------------------------------------------
 // Sensor ID
 // These should remain over time, do not modify them, only add new ones at the end
@@ -333,6 +335,7 @@
 #define SENSOR_SI1145_ID            39
 #define SENSOR_HDC1080_ID           40
 #define SENSOR_PZEM004TV30_ID       41
+#define SENSOR_BME680_ID            42
 
 //--------------------------------------------------------------------------------
 // Magnitudes
@@ -372,8 +375,12 @@
 #define MAGNITUDE_RESISTANCE        30
 #define MAGNITUDE_PH                31
 #define MAGNITUDE_FREQUENCY         32
+#define MAGNITUDE_IAQ               33
+#define MAGNITUDE_IAQ_ACCURACY      34
+#define MAGNITUDE_IAQ_STATIC        35
+#define MAGNITUDE_VOC               36
 
-#define MAGNITUDE_MAX               33
+#define MAGNITUDE_MAX               38
 
 #define SENSOR_ERROR_OK             0       // No error
 #define SENSOR_ERROR_OUT_OF_RANGE   1       // Result out of sensor range
@@ -414,10 +421,3 @@
 #define SECURE_CLIENT_CHECK_NONE          0 // !!! INSECURE CONNECTION !!!
 #define SECURE_CLIENT_CHECK_FINGERPRINT   1 // legacy fingerprint validation
 #define SECURE_CLIENT_CHECK_CA            2 // set trust anchor from PROGMEM CA certificate
-
-// -----------------------------------------------------------------------------
-// Hardware default values
-// -----------------------------------------------------------------------------
-
-#define GPIO_NONE           0x99
-#define RELAY_NONE          0x99

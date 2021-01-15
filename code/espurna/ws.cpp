@@ -21,8 +21,47 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 #include "libs/WebSocketIncommingBuffer.h"
 
 AsyncWebSocket _ws("/ws");
-Ticker _ws_defer;
+
+// -----------------------------------------------------------------------------
+// Periodic updates
+// -----------------------------------------------------------------------------
+
 uint32_t _ws_last_update = 0;
+
+void _wsResetUpdateTimer() {
+    _ws_last_update = millis() + WS_UPDATE_INTERVAL;
+}
+
+void _wsUpdate(JsonObject& root) {
+    root["heap"] = getFreeHeap();
+    root["uptime"] = getUptime();
+    root["rssi"] = WiFi.RSSI();
+    root["loadaverage"] = systemLoadAverage();
+    if (ADC_MODE_VALUE == ADC_VCC) {
+        root["vcc"] = ESP.getVcc();
+    } else {
+        root["vcc"] = "N/A (TOUT) ";
+    }
+#if NTP_SUPPORT
+    // XXX: arduinojson will ignore info.now assignment (64bit time_t) when trying to store it as integer
+    if (ntpSynced()) {
+        auto info = ntpInfo();
+        root["now"] = static_cast<double>(info.now);
+        root["nowString"] = info.utc;
+        root["nowLocalString"] = info.local.length()
+            ? info.local
+            : info.utc;
+    }
+#endif
+}
+
+void _wsDoUpdate(const bool connected) {
+    if (!connected) return;
+    if (millis() - _ws_last_update > WS_UPDATE_INTERVAL) {
+        _ws_last_update = millis();
+        wsSend(_wsUpdate);
+    }
+}
 
 // -----------------------------------------------------------------------------
 // WS callbacks
@@ -304,7 +343,11 @@ void _wsParse(AsyncWebSocketClient *client, uint8_t * payload, size_t length) {
         }
 
         if (strcmp(action, "reconnect") == 0) {
-            _ws_defer.once_ms(100, wifiDisconnect);
+            static Ticker timer;
+            timer.once_ms_scheduled(100, []() {
+                wifiDisconnect();
+                yield();
+            });
             return;
         }
 
@@ -354,7 +397,6 @@ void _wsParse(AsyncWebSocketClient *client, uint8_t * payload, size_t length) {
             String key = kv.key;
             JsonVariant& value = kv.value;
 
-            // Check password
             if (key == "adminPass") {
                 if (!value.is<JsonArray&>()) continue;
                 JsonArray& values = value.as<JsonArray&>();
@@ -371,6 +413,11 @@ void _wsParse(AsyncWebSocketClient *client, uint8_t * payload, size_t length) {
                 }
                 continue;
             }
+#if NTP_SUPPORT
+            else if (key == "ntpTZ") {
+                _wsResetUpdateTimer();
+            }
+#endif
 
             if (!_wsCheckKey(key, value)) {
                 delSetting(key);
@@ -412,33 +459,6 @@ void _wsParse(AsyncWebSocketClient *client, uint8_t * payload, size_t length) {
 
 }
 
-void _wsUpdate(JsonObject& root) {
-    root["heap"] = getFreeHeap();
-    root["uptime"] = getUptime();
-    root["rssi"] = WiFi.RSSI();
-    root["loadaverage"] = systemLoadAverage();
-    if (ADC_MODE_VALUE == ADC_VCC) {
-        root["vcc"] = ESP.getVcc();
-    } else {
-        root["vcc"] = "N/A (TOUT) ";
-    }
-    #if NTP_SUPPORT
-        if (ntpSynced()) root["now"] = now();
-    #endif
-}
-
-void _wsResetUpdateTimer() {
-    _ws_last_update = millis() + WS_UPDATE_INTERVAL;
-}
-
-void _wsDoUpdate(const bool connected) {
-    if (!connected) return;
-    if (millis() - _ws_last_update > WS_UPDATE_INTERVAL) {
-        _ws_last_update = millis();
-        wsSend(_wsUpdate);
-    }
-}
-
 bool _wsOnKeyCheck(const char * key, JsonVariant& value) {
     if (strncmp(key, "ws", 2) == 0) return true;
     if (strncmp(key, "admin", 5) == 0) return true;
@@ -452,11 +472,8 @@ void _wsOnConnected(JsonObject& root) {
     root["webMode"] = WEB_MODE_NORMAL;
 
     root["app_name"] = APP_NAME;
-    root["app_version"] = APP_VERSION;
+    root["app_version"] = getVersion().c_str();
     root["app_build"] = buildTime();
-    #if defined(APP_REVISION)
-        root["app_revision"] = APP_REVISION;
-    #endif
     root["device"] = getDevice().c_str();
     root["manufacturer"] = getManufacturer().c_str();
     root["chipid"] = getChipId().c_str();
@@ -698,7 +715,7 @@ void wsSend_P(uint32_t client_id, PGM_P payload) {
 void wsSetup() {
 
     _ws.onEvent(_wsEvent);
-    webServer()->addHandler(&_ws);
+    webServer().addHandler(&_ws);
 
     // CORS
     const String webDomain = getSetting("webDomain", WEB_REMOTE_DOMAIN);
@@ -707,7 +724,7 @@ void wsSetup() {
         DefaultHeaders::Instance().addHeader("Access-Control-Allow-Credentials", "true");
     }
 
-    webServer()->on("/auth", HTTP_GET, _onAuth);
+    webServer().on("/auth", HTTP_GET, _onAuth);
 
     wsRegister()
         .onConnected(_wsOnConnected)

@@ -31,6 +31,7 @@ const String& getDevice();
 const String& getManufacturer();
 const String& getCoreVersion();
 const String& getCoreRevision();
+const String& getVersion();
 
 int getHeartbeatMode();
 unsigned long getHeartbeatInterval();
@@ -69,5 +70,5 @@ void nice_delay(unsigned long ms);
 
 double roundTo(double num, unsigned char positions);
 
-size_t hexEncode(uint8_t* in, size_t in_size, char* out, size_t out_size);
-size_t hexDecode(const char* in, size_t in_size, uint8_t* out, uint8_t out_size);
+size_t hexEncode(const uint8_t* in, size_t in_size, char* out, size_t out_size);
+size_t hexDecode(const char* in, size_t in_size, uint8_t* out, size_t out_size);

@@ -748,6 +748,14 @@ WiFiApMode wifiApMode() {
     return _wifi_ap_mode;
 }
 
+void wifiTurnOff() {
+    jw.turnOff();
+}
+
+void wifiTurnOn() {
+    jw.turnOn();
+}
+
 // -----------------------------------------------------------------------------
 // INITIALIZATION
 // -----------------------------------------------------------------------------
@@ -757,7 +765,31 @@ void wifiSetup() {
     // Backwards compat, we need to specify namespace
     moveSetting("apmode", "wifiApMode");
 
+    jw.begin();
     _wifiConfigure();
+
+    // Note that maximum amount of stations is set by `WiFi.softAP(...)` call, but justwifi handles that.
+    // Default is 4, which we use here. However, maximum is 8. ref:
+    // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/soft-access-point-class.html#softap
+#if WIFI_AP_LEASES_SUPPORT
+    wifiRegister([](justwifi_messages_t code, char*) {
+        if (MESSAGE_ACCESSPOINT_CREATING != code) return;
+
+        for (unsigned char index = 0; index < 4; ++index) {
+            auto lease = getSetting({"wifiApLease", index});
+            if (12 != lease.length()) {
+                break;
+            }
+
+            uint8_t mac[6] = {0};
+            if (!hexDecode(lease.c_str(), lease.length(), mac, sizeof(mac))) {
+                break;
+            }
+
+            wifi_softap_add_dhcps_lease(mac);
+        }
+    });
+#endif
 
     if (WiFiApMode::Enabled ==_wifi_ap_mode) {
         jw.enableAP(true);

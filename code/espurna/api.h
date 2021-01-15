@@ -13,7 +13,10 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 
 #if WEB_SUPPORT
 
+bool apiAuthenticateHeader(AsyncWebServerRequest*, const String& key);
+bool apiAuthenticateParam(AsyncWebServerRequest*, const String& key);
 bool apiAuthenticate(AsyncWebServerRequest*);
+void apiCommonSetup();
 bool apiEnabled();
 bool apiRestFul();
 String apiKey();
@@ -22,14 +25,19 @@ String apiKey();
 
 #if WEB_SUPPORT && API_SUPPORT
 
+#include "api_impl.h"
+
 #include <functional>
 
-using api_get_callback_f = std::function<void(char * buffer, size_t size)>;
-using api_put_callback_f = std::function<void(const char * payload)> ;
+using ApiBasicHandler = std::function<bool(ApiRequest&)>;
+using ApiJsonHandler = std::function<bool(ApiRequest&, JsonObject& reponse)>;
 
-void apiRegister(const String& key, api_get_callback_f getFn, api_put_callback_f putFn = nullptr);
+void apiRegister(const String& path, ApiBasicHandler&& get, ApiBasicHandler&& put);
+void apiRegister(const String& path, ApiJsonHandler&& get, ApiJsonHandler&& put);
 
-void apiCommonSetup();
 void apiSetup();
+
+bool apiError(ApiRequest&);
+bool apiOk(ApiRequest&);
 
 #endif // API_SUPPORT == 1

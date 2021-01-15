@@ -29,7 +29,7 @@ void terminalError(Print&, const String& error);
 void terminalOK(const terminal::CommandContext&);
 void terminalError(const terminal::CommandContext&, const String&);
 
-void terminalRegisterCommand(const String& name, terminal::Terminal::CommandFunc func);
+void terminalRegisterCommand(const __FlashStringHelper* name, terminal::Terminal::CommandFunc func);
 
 size_t terminalCapacity();
 void terminalInject(void *data, size_t len);
@@ -37,5 +37,6 @@ void terminalInject(char ch);
 Stream& terminalDefaultStream();
 
 void terminalSetup();
+void terminalWebApiSetup();
 
 #endif // TERMINAL_SUPPORT == 1

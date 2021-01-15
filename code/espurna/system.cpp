@@ -90,7 +90,7 @@ void systemCheck(bool stable) {
 
         if (++value > SYSTEM_CHECK_MAX) {
             _systemStable = false;
-            value = 0;
+            value = SYSTEM_CHECK_MAX;
             DEBUG_MSG_P(PSTR("[MAIN] System UNSTABLE\n"));
         }
     }
@@ -186,6 +186,7 @@ void systemLoop() {
 
     if (checkNeedsReset()) {
         reset();
+        return;
     }
 
     // -------------------------------------------------------------------------
@@ -242,19 +243,11 @@ void systemLoop() {
 }
 
 void _systemSetupSpecificHardware() {
-
     //The ESPLive has an ADC MUX which needs to be configured.
     #if defined(MANCAVEMADE_ESPLIVE)
         pinMode(16, OUTPUT);
         digitalWrite(16, HIGH); //Defualt CT input (pin B, solder jumper B)
     #endif
-
-    // These devices use the hardware UART
-    // to communicate to secondary microcontrollers
-    #if (RF_SUPPORT && !RFB_DIRECT) || (RELAY_PROVIDER == RELAY_PROVIDER_DUAL) || (RELAY_PROVIDER == RELAY_PROVIDER_STM)
-        Serial.begin(SERIAL_BAUDRATE);
-    #endif
-
 }
 
 void systemSetup() {

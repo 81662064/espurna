@@ -79,7 +79,7 @@
 //------------------------------------------------------------------------------
 
 // UDP debug log
-// To receive the message son the destination computer use nc:
+// To receive the message on the destination computer use nc:
 // nc -ul 8113
 
 #ifndef DEBUG_UDP_SUPPORT
@@ -190,7 +190,7 @@
 #endif
 
 #ifndef TERMINAL_WEB_API_PATH
-#define TERMINAL_WEB_API_PATH       "/api/cmd"
+#define TERMINAL_WEB_API_PATH       "cmd"
 #endif
 
 //------------------------------------------------------------------------------
@@ -225,6 +225,22 @@
 
 #ifndef SAVE_CRASH_STACK_TRACE_MAX
 #define SAVE_CRASH_STACK_TRACE_MAX  0x80        // limit at 128 bytes (increment/decrement by 16)
+#endif
+
+//------------------------------------------------------------------------------
+// GARLAND
+//------------------------------------------------------------------------------
+
+#ifndef GARLAND_SUPPORT
+#define GARLAND_SUPPORT             0
+#endif
+
+#ifndef GARLAND_D_PIN
+#define GARLAND_D_PIN               D2          // WS2812 pin number
+#endif
+
+#ifndef GARLAND_LEDS
+#define GARLAND_LEDS                60          // Leds number
 #endif
 
 //------------------------------------------------------------------------------
@@ -393,19 +409,25 @@
 
 #ifndef BUTTON_MQTT_SEND_ALL_EVENTS
 #define BUTTON_MQTT_SEND_ALL_EVENTS     0           // 0 - to send only events the are bound to actions
-                                                   // 1 - to send all button events to MQTT
+                                                    // 1 - to send all button events to MQTT
 #endif
 
 #ifndef BUTTON_MQTT_RETAIN
 #define BUTTON_MQTT_RETAIN              0
 #endif
 
-#ifndef BUTTON_EVENTS_SOURCE
-#define BUTTON_EVENTS_SOURCE            BUTTON_EVENTS_SOURCE_GENERIC   // Type of button event source. One of:
-                                                                       // BUTTON_EVENTS_SOURCE_GENERIC - GPIOs (virtual or real)
-                                                                       // BUTTON_EVENTS_SOURCE_SONOFF_DUAL - hardware specific, drive buttons through serial connection
-                                                                       // BUTTON_EVENTS_SOURCE_FOXEL_LIGHTFOX_DUAL - similar to Itead Sonoff Dual, hardware specific
-                                                                       // BUTTON_EVENTS_SOURCE_MCP23S08 - activate virtual button connected to gpio expander
+// Generic digital pin support
+
+#ifndef BUTTON_PROVIDER_GPIO_SUPPORT
+#define BUTTON_PROVIDER_GPIO_SUPPORT                1
+#endif
+
+// Resistor ladder support. Poll analog pin and return digital LOW when analog reading is in a certain range
+// ref. https://github.com/bxparks/AceButton/tree/develop/docs/resistor_ladder
+// Uses BUTTON#_ANALOG_LEVEL for the individual button level configuration
+
+#ifndef BUTTON_PROVIDER_ANALOG_SUPPORT
+#define BUTTON_PROVIDER_ANALOG_SUPPORT              0
 #endif
 
 //------------------------------------------------------------------------------
@@ -432,8 +454,19 @@
 // RELAY
 //------------------------------------------------------------------------------
 
+// Enable general support for relays (aka switches)
 #ifndef RELAY_SUPPORT
-#define RELAY_SUPPORT               1
+#define RELAY_SUPPORT                   1
+#endif
+
+// ESP01-relays with STM co-MCU driving the relays
+#ifndef RELAY_PROVIDER_STM_SUPPORT
+#define RELAY_PROVIDER_STM_SUPPORT      0
+#endif
+
+// Sonoff Dual, using serial protocol
+#ifndef RELAY_PROVIDER_DUAL_SUPPORT
+#define RELAY_PROVIDER_DUAL_SUPPORT     0
 #endif
 
 // Default boot mode: 0 means OFF, 1 ON and 2 whatever was before
@@ -441,9 +474,16 @@
 #define RELAY_BOOT_MODE             RELAY_BOOT_OFF
 #endif
 
-// 0 means ANY, 1 zero or one and 2 one and only one
+// One of RELAY_SYNC_ANY, RELAY_SYNC_NONE_OR_ONE, RELAY_SYNC_SAME or RELAY_SYNC_FIRST
+// Default to ANY i.e. don't do anything
 #ifndef RELAY_SYNC
 #define RELAY_SYNC                  RELAY_SYNC_ANY
+#endif
+
+// 0 (ms) means EVERY relay switches as soon as possible
+// otherwise, wait up until this much time before changing the status
+#ifndef RELAY_DELAY_INTERLOCK
+#define RELAY_DELAY_INTERLOCK       0
 #endif
 
 // Default pulse mode: 0 means no pulses, 1 means normally off, 2 normally on
@@ -527,6 +567,11 @@
 #ifndef WIFI_AP_PASS
 #define WIFI_AP_PASS                ""                     // (optional) Specify softAp passphrase
                                                            // By default or when empty, admin password is used instead.
+#endif
+
+#ifndef WIFI_AP_LEASES_SUPPORT
+#define WIFI_AP_LEASES_SUPPORT      0                      // (optional) Specify softAp MAC<->IP DHCP reservations
+                                                           // Use `set wifiApLease# MAC`, where MAC is a valid 12-byte HEX number without colons
 #endif
 
 #ifndef WIFI_SLEEP_MODE
@@ -667,7 +712,7 @@
 #endif
 
 // ref: https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/kconfig.html#config-lwip-esp-gratuitous-arp
-// ref: https://github.com/xoseperez/espurna/pull/1877#issuecomment-525612546 
+// ref: https://github.com/xoseperez/espurna/pull/1877#issuecomment-525612546
 //
 // Broadcast gratuitous ARP periodically to update ARP tables on the AP and all devices on the same network.
 // Helps to solve compatibility issues when ESP fails to timely reply to ARP requests, causing the device's ARP table entry to expire.
@@ -704,6 +749,10 @@
 
 #ifndef WEB_EMBEDDED
 #define WEB_EMBEDDED                1           // Build the firmware with the web interface embedded in
+#endif
+
+#ifndef WEB_ACCESS_LOG
+#define WEB_ACCESS_LOG              0           // Log every request that was received by the server (but, not necessarily processed)
 #endif
 
 // Requires ESPAsyncTCP to be built with ASYNC_TCP_SSL_ENABLED=1 and Arduino Core version >= 2.4.0
@@ -778,8 +827,12 @@
                                                 // Setting this to 0 will allow using GET to change relays, for instance
 #endif
 
-#ifndef API_BUFFER_SIZE
-#define API_BUFFER_SIZE             64          // Size of the buffer for HTTP GET API responses
+#ifndef API_JSON_BUFFER_SIZE
+#define API_JSON_BUFFER_SIZE        256         // Size of the (de)serializer buffer.
+#endif
+
+#ifndef API_BASE_PATH
+#define API_BASE_PATH               "/api/"
 #endif
 
 #ifndef API_REAL_TIME_VALUES
@@ -1028,7 +1081,7 @@
 #endif
 
 #ifndef MQTT_SECURE_CLIENT_MFLN
-#define MQTT_SECURE_CLIENT_MFLN     SECURE_CLIENT_MFLN  // Use global MFLN setting by default 
+#define MQTT_SECURE_CLIENT_MFLN     SECURE_CLIENT_MFLN  // Use global MFLN setting by default
 #endif
 
 #ifndef MQTT_SECURE_CLIENT_INCLUDE_CA
@@ -1093,12 +1146,8 @@
 #endif
 
 
-#ifndef MQTT_SKIP_RETAINED
-#define MQTT_SKIP_RETAINED          1               // Skip retained messages on connection
-#endif
-
 #ifndef MQTT_SKIP_TIME
-#define MQTT_SKIP_TIME              1000            // Skip messages for 1 second anter connection
+#define MQTT_SKIP_TIME              0               // Skip messages for N ms after connection. Disabled by default
 #endif
 
 #ifndef MQTT_USE_JSON
@@ -1183,6 +1232,7 @@
 #define MQTT_TOPIC_CMD              "cmd"
 
 // Light module
+#define MQTT_TOPIC_LIGHT            "light"
 #define MQTT_TOPIC_CHANNEL          "channel"
 #define MQTT_TOPIC_COLOR_RGB        "rgb"
 #define MQTT_TOPIC_COLOR_HSV        "hsv"
@@ -1256,16 +1306,20 @@
 // 4 channels => RGBW
 // 5 channels => RGBWW
 
-#ifndef LIGHT_SAVE_ENABLED
-#define LIGHT_SAVE_ENABLED      1           // Light channel values saved by default after each change
+#ifndef LIGHT_PROVIDER
+#define LIGHT_PROVIDER LIGHT_PROVIDER_NONE
 #endif
 
-#ifndef LIGHT_COMMS_DELAY
-#define LIGHT_COMMS_DELAY       100         // Delay communication after light update (in ms)
+#ifndef LIGHT_REPORT_DELAY
+#define LIGHT_REPORT_DELAY      100        // Delay reporting current state for the specified number of ms after light update
+#endif
+
+#ifndef LIGHT_SAVE_ENABLED
+#define LIGHT_SAVE_ENABLED      1          // Light channel values saved by default after each change
 #endif
 
 #ifndef LIGHT_SAVE_DELAY
-#define LIGHT_SAVE_DELAY        5           // Persist color after 5 seconds to avoid wearing out
+#define LIGHT_SAVE_DELAY        5000       // Persist channel & brightness values after the specified number of ms
 #endif
 
 #ifndef LIGHT_MIN_PWM
@@ -1366,6 +1420,9 @@
 #define LIGHT_TRANSITION_TIME   500         // Time in millis from color to color
 #endif
 
+#ifndef LIGHT_RELAY_ENABLED
+#define LIGHT_RELAY_ENABLED     1           // Add a virtual switch that controls the global light state. Depends on RELAY_SUPPORT
+#endif
 
 // -----------------------------------------------------------------------------
 // DOMOTICZ
@@ -1572,28 +1629,6 @@
 #define NTP_WAIT_FOR_SYNC           1               // Do not report any datetime until NTP sync'ed
 #endif
 
-// WARNING: legacy NTP settings. can be ignored with Core 2.6.2+
-
-#ifndef NTP_TIMEOUT
-#define NTP_TIMEOUT                 1000            // Set NTP request timeout to 2 seconds (issue #452)
-#endif
-
-#ifndef NTP_TIME_OFFSET
-#define NTP_TIME_OFFSET             60              // Default timezone offset (GMT+1)
-#endif
-
-#ifndef NTP_DAY_LIGHT
-#define NTP_DAY_LIGHT               1               // Enable daylight time saving by default
-#endif
-
-#ifndef NTP_SYNC_INTERVAL
-#define NTP_SYNC_INTERVAL           60              // NTP initial check every minute
-#endif
-
-#ifndef NTP_DST_REGION
-#define NTP_DST_REGION              0               // 0 for Europe, 1 for USA (defined in NtpClientLib)
-#endif
-
 // -----------------------------------------------------------------------------
 // ALEXA
 // -----------------------------------------------------------------------------
@@ -1616,40 +1651,26 @@
 
 
 // -----------------------------------------------------------------------------
-// MQTT RF BRIDGE
+// RF BRIDGE
 // -----------------------------------------------------------------------------
 
-#ifndef RF_SUPPORT
-#define RF_SUPPORT                  0
+#ifndef RFB_SUPPORT
+#define RFB_SUPPORT                  0
 #endif
 
-#ifndef RF_DEBOUNCE
-#define RF_DEBOUNCE                 500
+#ifndef RFB_SEND_REPEATS
+#define RFB_SEND_REPEATS             1               // How many times to send the message
 #endif
 
-#ifndef RF_LEARN_TIMEOUT
-#define RF_LEARN_TIMEOUT            60000
-#endif
-
-#ifndef RF_SEND_TIMES
-#define RF_SEND_TIMES               4               // How many times to send the message
-#endif
-
-#ifndef RF_SEND_DELAY
-#define RF_SEND_DELAY               500             // Interval between sendings in ms
-#endif
-
-#ifndef RF_RECEIVE_DELAY
-#define RF_RECEIVE_DELAY            500             // Interval between recieving in ms (avoid debouncing)
-#endif
-
-// Enable RCSwitch support
+// - RFB_PROVIDER_EFM8BB1
+// Default option for the ITEAD_SONOFF_RFBRIDGE or any custom firmware implementing the protocol
+// - RFB_PROVIDER_RCSWITCH
 // Originally implemented for SONOFF BASIC
 // https://tinkerman.cat/adding-rf-to-a-non-rf-itead-sonoff/
 // Also possible to use with SONOFF RF BRIDGE, thanks to @wildwiz
 // https://github.com/xoseperez/espurna/wiki/Hardware-Itead-Sonoff-RF-Bridge---Direct-Hack
-#ifndef RFB_DIRECT
-#define RFB_DIRECT                  0
+#ifndef RFB_PROVIDER
+#define RFB_PROVIDER                RFB_PROVIDER_RCSWITCH
 #endif
 
 #ifndef RFB_RX_PIN
@@ -1660,6 +1681,21 @@
 #define RFB_TX_PIN                  GPIO_NONE
 #endif
 
+#ifndef RFB_LEARN_TIMEOUT
+#define RFB_LEARN_TIMEOUT           15000
+#endif
+
+#ifndef RFB_SEND_DELAY
+#define RFB_SEND_DELAY              500             // Interval between sendings in ms
+#endif
+
+#ifndef RFB_RECEIVE_DELAY
+#define RFB_RECEIVE_DELAY           500             // Interval between recieving in ms (avoid bouncing)
+#endif
+
+#ifndef RFB_TRANSMIT_REPEATS
+#define RFB_TRANSMIT_REPEATS        5               // How many times RCSwitch will repeat the message
+#endif
 
 // -----------------------------------------------------------------------------
 // IR Bridge
@@ -1769,6 +1805,7 @@
 //--------------------------------------------------------------------------------
 // TUYA switch & dimmer support
 //--------------------------------------------------------------------------------
+
 #ifndef TUYA_SUPPORT
 #define TUYA_SUPPORT                0
 #endif
@@ -1777,12 +1814,36 @@
 #define TUYA_SERIAL                 Serial
 #endif
 
+#ifndef TUYA_FILTER_ENABLED
+#define TUYA_FILTER_ENABLED         1
+#endif
+
+#ifndef TUYA_DEBUG_ENABLED
+#define TUYA_DEBUG_ENABLED          1
+#endif
+
 //--------------------------------------------------------------------------------
 // Support expander MCP23S08
 //--------------------------------------------------------------------------------
 
 #ifndef MCP23S08_SUPPORT
 #define MCP23S08_SUPPORT            0
+#endif
+
+//--------------------------------------------------------------------------------
+// Support prometheus metrics export
+//--------------------------------------------------------------------------------
+
+#ifndef PROMETHEUS_SUPPORT
+#define PROMETHEUS_SUPPORT          0
+#endif
+
+//--------------------------------------------------------------------------------
+// ITEAD iFan support
+//--------------------------------------------------------------------------------
+
+#ifndef IFAN_SUPPORT
+#define IFAN_SUPPORT                0
 #endif
 
 // =============================================================================

@@ -10,20 +10,25 @@
 // For example, some configuration options for BUTTON, RELAY and LED modules.
 // See general.h, defaults.h and types.h for all of the available flags.
 //
-// BUTTON[1-8]_PIN: GPIO for the n-th button (1-based, up to 8 buttons)
-// BUTTON[1-8]_RELAY: Relay number that will be bind to the n-th button (1-based)
-// BUTTON[1-8]_CONFIG: Configuration mask (e.g. BUTTON_PUSHBUTTON and BUTTON_SWITCH cannot be together)
+// BUTTON[1-8]_CONFIG: Configuration mask (note that BUTTON_PUSHBUTTON and BUTTON_SWITCH cannot be together)
 //   - BUTTON_PUSHBUTTON: button event is fired when released
 //   - BUTTON_SWITCH: button event is fired when pressed or released
-//   - BUTTON_DEFAULT_HIGH: there is a pull up in place
+//   - BUTTON_DEFAULT_HIGH: there is a pull up in place, HIGH is default state
+//   - BUTTON_DEFAULT_LOW: there is a pull down in place, LOW is default state
+//   - BUTTON_DEFAULT_BOOT: use state that we read on firmware boot
 //   - BUTTON_SET_PULLUP: set pullup by software
+//   - BUTTON_SET_PULLDOWN: set pulldown by software (esp8266: only GPIO16)
+// BUTTON[1-8]_... actions: Check types.h for BUTTONx_ACTION_...
+// BUTTON[1-8]_PIN: GPIO for the n-th button (1-based, up to 8 buttons)
+// BUTTON[1-8]_PROVIDER: Check types.h for the BUTTON_PROVIDER_...
+// BUTTON[1-8]_RELAY: Relay number that will be bound to the n-th button (when ACTION is set to ON, OFF or TOGGLE; 1-based)
 //
 // RELAY[1-8]_PIN: GPIO for the n-th relay (1-based, up to 8 relays)
 // RELAY[1-8]_TYPE: Relay can be RELAY_TYPE_NORMAL, RELAY_TYPE_INVERSE, RELAY_TYPE_LATCHED or RELAY_TYPE_LATCHED_INVERSE
 //
 // LED[1-8]_PIN: GPIO for the n-th LED (1-based, up to 8 LEDs)
 // LED[1-8]_PIN_INVERSE: LED has inversed logic (lit when pulled down)
-// LED[1-8]_MODE: Check types.h for LED_MODE_%
+// LED[1-8]_MODE: Check types.h for LED_MODE_...
 // LED[1-8]_RELAY: Linked relay (1-based)
 //
 // Besides, other hardware specific information should be stated here
@@ -369,9 +374,12 @@
     #define BUTTON1_PIN         0
     #define BUTTON1_CONFIG      BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
     #define BUTTON1_RELAY       1
+
     #define BUTTON2_PIN         4
-    #define BUTTON2_CONFIG      BUTTON_SWITCH | BUTTON_SET_PULLUP | BUTTON_DEFAULT_HIGH
+    #define BUTTON2_CONFIG      BUTTON_SWITCH | BUTTON_SET_PULLUP | BUTTON_DEFAULT_BOOT
     #define BUTTON2_RELAY       1
+    #define BUTTON2_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON2_RELEASE     BUTTON_ACTION_TOGGLE
 
     // Relays
     #define RELAY1_PIN          12
@@ -557,20 +565,23 @@
     #define MANUFACTURER            "ITEAD"
     #define DEVICE                  "SONOFF_DUAL"
     #define SERIAL_BAUDRATE         19230
-    #define RELAY_PROVIDER          RELAY_PROVIDER_DUAL
-    #define DUMMY_RELAY_COUNT       2
-    #define DEBUG_SERIAL_SUPPORT    0
-
-    // Buttons
-    #define BUTTON1_RELAY       1
-    #define BUTTON2_RELAY       2
-    #define BUTTON3_RELAY       1
-
-    #define BUTTON_EVENTS_SOURCE    BUTTON_EVENTS_SOURCE_ITEAD_SONOFF_DUAL
 
     // LEDs
     #define LED1_PIN            13
     #define LED1_PIN_INVERSE    1
+
+    // Relays
+    #define RELAY_PROVIDER_DUAL_SUPPORT 1
+
+    #define RELAY1_PROVIDER     RELAY_PROVIDER_DUAL
+    #define RELAY2_PROVIDER     RELAY_PROVIDER_DUAL
+
+    // No need to include generic GPIO support
+    // "Buttons" are attached to a secondary MCU and RELAY_PROVIDER_DUAL handles that
+    #define BUTTON_PROVIDER_GPIO_SUPPORT    0
+
+    // Conflicts with relay operation
+    #define DEBUG_SERIAL_SUPPORT            0
 
 #elif defined(ITEAD_SONOFF_DUAL_R2)
 
@@ -757,9 +768,7 @@
     // Info
     #define MANUFACTURER        "ITEAD"
     #define DEVICE              "BNSZ01"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            13
@@ -774,7 +783,6 @@
     // Info
     #define MANUFACTURER        "ITEAD"
     #define DEVICE              "SONOFF_RFBRIDGE"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_RFBRIDGE
 
     // Number of virtual switches
     #ifndef DUMMY_RELAY_COUNT
@@ -789,28 +797,30 @@
     #define LED1_PIN            13
     #define LED1_PIN_INVERSE    1
 
-    #define RF_SUPPORT          1
-
-    // Only used when RFB_DIRECT=1
-    #define RFB_RX_PIN          4
-    #define RFB_TX_PIN          5
+    #define RFB_SUPPORT         1
 
     // When using un-modified harware, ESPurna communicates with the secondary
     // MCU EFM8BB1 via UART at 19200 bps so we need to change the speed of
     // the port and remove UART noise on serial line
-    #if not RFB_DIRECT
+    #ifndef RFB_PROVIDER
+    #define RFB_PROVIDER        RFB_PROVIDER_EFM8BB1
+    #endif
+
+    #if RFB_PROVIDER == RFB_PROVIDER_EFM8BB1
     #define SERIAL_BAUDRATE         19200
     #define DEBUG_SERIAL_SUPPORT    0
     #endif
+
+    // Only used when RFB_PROVIDER is RCSWITCH
+    #define RFB_RX_PIN          4
+    #define RFB_TX_PIN          5
 
 #elif defined(ITEAD_SONOFF_B1)
 
     // Info
     #define MANUFACTURER        "ITEAD"
     #define DEVICE              "SONOFF_B1"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -827,9 +837,7 @@
     // Info
     #define MANUFACTURER        "ITEAD"
     #define DEVICE              "SONOFF_LED"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            13
@@ -1002,25 +1010,22 @@
     #define MANUFACTURER            "ITEAD"
     #define DEVICE                  "SONOFF_IFAN02"
 
-    // These are virtual buttons triggered by the remote
-    #define BUTTON1_PIN             0
-    #define BUTTON2_PIN             9
-    #define BUTTON3_PIN             10
-    #define BUTTON4_PIN             14
-    #define BUTTON1_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
-    #define BUTTON2_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
-    #define BUTTON3_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
-    #define BUTTON4_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
+    // Base module
+    #define IFAN_SUPPORT            1
 
-    // Relays
-    #define RELAY1_PIN              12
-    #define RELAY2_PIN              5
-    #define RELAY3_PIN              4
-    #define RELAY4_PIN              15
-    #define RELAY1_TYPE             RELAY_TYPE_NORMAL
-    #define RELAY2_TYPE             RELAY_TYPE_NORMAL
-    #define RELAY3_TYPE             RELAY_TYPE_NORMAL
-    #define RELAY4_TYPE             RELAY_TYPE_NORMAL
+    // These buttons are triggered by the remote
+    // iFan module adds a custom button handler and a special relay controlling the speed
+    #define BUTTON1_PIN             0
+    #define BUTTON1_CLICK           BUTTON_ACTION_TOGGLE
+
+    #define BUTTON2_PIN             9
+    #define BUTTON2_CLICK           BUTTON_ACTION_CUSTOM
+
+    #define BUTTON3_PIN             10
+    #define BUTTON3_CLICK           BUTTON_ACTION_CUSTOM
+
+    #define BUTTON4_PIN             14
+    #define BUTTON4_CLICK           BUTTON_ACTION_CUSTOM
 
     // LEDs
     #define LED1_PIN                13
@@ -1234,9 +1239,7 @@
     // Info
     #define MANUFACTURER        "AITHINKER"
     #define DEVICE              "AI_LIGHT"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -1256,9 +1259,7 @@
     // Info
     #define MANUFACTURER        "LYASI"
     #define DEVICE              "RGB_LED"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -1278,9 +1279,7 @@
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "LED_CONTROLLER"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            2
@@ -1303,9 +1302,7 @@
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "LED_CONTROLLER_20"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            2
@@ -1328,9 +1325,7 @@
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "ZJ_WFMN_A_11"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            2
@@ -1355,9 +1350,7 @@
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "ZJ_WFMN_B_11"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            2
@@ -1373,18 +1366,16 @@
     #define LIGHT_CH4_PIN       13      // WHITE
 
     // RF
-    #define RF_SUPPORT          1
-    #define RFB_DIRECT          1
-    #define RFB_RX_PIN          4
+    #define RFB_SUPPORT          1
+    #define RFB_PROVIDER         RFB_PROVIDER_RCSWITCH
+    #define RFB_RX_PIN           4
 
 #elif defined(MAGICHOME_ZJ_WFMN_C_11)
 
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "ZJ_WFMN_C_11"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
 	// Buttons
     #define BUTTON1_PIN         0
@@ -1404,9 +1395,7 @@
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "ZJ_ESPM_5CH_B_13"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Buttons
     #define BUTTON1_PIN         0
@@ -1430,9 +1419,7 @@
     // Info
     #define MANUFACTURER        "MAGICHOME"
     #define DEVICE              "ZJ_LB_RGBWW_L"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -1451,9 +1438,7 @@
     // Info
     #define MANUFACTURER        "HUACANXING"
     #define DEVICE              "H801"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
     #define DEBUG_PORT          Serial1
     #define SERIAL_RX_ENABLED   1
 
@@ -1474,9 +1459,7 @@
     // Info
     #define MANUFACTURER        "HUACANXING"
     #define DEVICE              "H802"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
     #define DEBUG_PORT          Serial1
     #define SERIAL_RX_ENABLED   1
 
@@ -1678,11 +1661,16 @@
 
     // Buttons
     #define BUTTON1_PIN         5
-    #define BUTTON2_PIN         4
     #define BUTTON1_RELAY       1
+    #define BUTTON1_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT | BUTTON_SET_PULLUP
+    #define BUTTON1_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE     BUTTON_ACTION_TOGGLE
+
+    #define BUTTON2_PIN         4
     #define BUTTON2_RELAY       2
-    #define BUTTON1_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_HIGH | BUTTON_SET_PULLUP
-    #define BUTTON2_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_HIGH | BUTTON_SET_PULLUP
+    #define BUTTON2_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT | BUTTON_SET_PULLUP
+    #define BUTTON2_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON2_RELEASE     BUTTON_ACTION_TOGGLE
 
     // Relays
     #define RELAY1_PIN          14
@@ -1765,6 +1753,9 @@
     #define OTA_ARDUINOOTA_SUPPORT   0
     #define OTA_CLIENT               OTA_CLIENT_NONE
 
+    // Web UI blob & MDNS are pretty large
+    #define WEB_EMBEDDED             0
+    #define MDNS_SERVER_SUPPORT      0
 
 // -----------------------------------------------------------------------------
 // ESPLive
@@ -1812,9 +1803,7 @@
     // Info
     #define MANUFACTURER        "INTERMITTECH"
     #define DEVICE              "QUINLED"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            5
@@ -1834,9 +1823,7 @@
     // Info
     #define MANUFACTURER        "ARILUX"
     #define DEVICE              "AL_LC01"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      3
@@ -1849,9 +1836,7 @@
     // Info
     #define MANUFACTURER        "ARILUX"
     #define DEVICE              "AL_LC02"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -1865,9 +1850,7 @@
     // Info
     #define MANUFACTURER        "ARILUX"
     #define DEVICE              "AL_LC02_V14"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -1881,9 +1864,7 @@
     // Info
     #define MANUFACTURER        "ARILUX"
     #define DEVICE              "AL_LC06"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Buttons
     #define BUTTON1_PIN         0
@@ -1903,9 +1884,7 @@
     // Info
     #define MANUFACTURER        "ARILUX"
     #define DEVICE              "AL_LC11"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -1920,9 +1899,7 @@
     // Info
     #define MANUFACTURER        "ARILUX"
     #define DEVICE              "E27"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -1991,9 +1968,7 @@
     // Info
     #define MANUFACTURER        "AUTHOMETION"
     #define DEVICE              "LYT8266"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -2009,9 +1984,7 @@
     // Info
     #define MANUFACTURER        "GIZWITS"
     #define DEVICE              "WITTY_CLOUD"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Buttons
     #define BUTTON1_PIN         4
@@ -2168,10 +2141,19 @@
     #define DEVICE                  "2CH"
 
     // Relays
-    #define DUMMY_RELAY_COUNT       2
-    #define RELAY_PROVIDER          RELAY_PROVIDER_STM
+    #define RELAY_PROVIDER_STM_SUPPORT  1
+
+    #define RELAY1_PROVIDER          RELAY_PROVIDER_STM
+    #define RELAY2_PROVIDER          RELAY_PROVIDER_STM
+
+    // Make sure we space out serial writes when relays are in sync. ref:
+    // - https://github.com/xoseperez/espurna/issues/1130
+    // - https://github.com/xoseperez/espurna/issues/1519
+    // - https://github.com/xoseperez/espurna/pull/1520
+    #define RELAY_DELAY_INTERLOCK    100
 
     // Remove UART noise on serial line
+    // (or use `#define DEBUG_PORT Serial1` instead)
     #define DEBUG_SERIAL_SUPPORT    0
 
 // -----------------------------------------------------------------------------
@@ -2550,14 +2532,11 @@
 
     // Buttons
     #define BUTTON1_PIN           4 // D2
-    #define BUTTON1_CONFIG        BUTTON_SWITCH | BUTTON_SET_PULLUP | BUTTON_DEFAULT_HIGH
+    #define BUTTON1_CONFIG        BUTTON_SWITCH | BUTTON_SET_PULLUP | BUTTON_DEFAULT_BOOT
     #define BUTTON1_RELAY         1
 
-    #define BUTTON1_PRESS         BUTTON_ACTION_NONE
-    #define BUTTON1_CLICK         BUTTON_ACTION_TOGGLE
-    #define BUTTON1_DBLCLICK      BUTTON_ACTION_NONE
-    #define BUTTON1_LNGCLICK      BUTTON_ACTION_NONE
-    #define BUTTON1_LNGLNGCLICK   BUTTON_ACTION_NONE
+    #define BUTTON1_PRESS         BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE       BUTTON_ACTION_TOGGLE
 
     // Relays
     #define RELAY1_PIN            5 // D1
@@ -2683,9 +2662,9 @@
     #endif
     #define DALLAS_PIN          2
 
-    #define RF_SUPPORT          1
-    #define RFB_DIRECT          1
-    #define RFB_RX_PIN          14
+    #define RFB_SUPPORT          1
+    #define RFB_PROVIDER         RFB_PROVIDER_RCSWITCH
+    #define RFB_RX_PIN           14
 
     #ifndef DIGITAL_SUPPORT
     #define DIGITAL_SUPPORT      1
@@ -2716,15 +2695,15 @@
 
 
 // -----------------------------------------------------------------------------
-// Zhilde ZLD-EU44-W
+// Zhilde ZLD-44EU-W
 // http://www.zhilde.com/product/60705150109-805652505/EU_WiFi_Surge_Protector_Extension_Socket_4_Outlets_works_with_Amazon_Echo_Smart_Power_Strip.html
 // -----------------------------------------------------------------------------
 
-#elif defined(ZHILDE_EU44_W)
+#elif defined(ZHILDE_44EU_W)
 
     // Info
     #define MANUFACTURER            "ZHILDE"
-    #define DEVICE                  "EU44_W"
+    #define DEVICE                  "44EU_W"
 
     // Based on the reporter, this product uses GPIO1 and 3 for the button
     // and onboard LED, so hardware serial should be disabled...
@@ -2747,6 +2726,32 @@
     #define RELAY5_TYPE             RELAY_TYPE_NORMAL
 
     // LEDs
+    #define LED1_PIN                1
+    #define LED1_PIN_INVERSE        1
+
+// -----------------------------------------------------------------------------
+// Zhilde ZLD-64EU-W
+// -----------------------------------------------------------------------------
+
+#elif defined(ZHILDE_64EU_W)
+
+    // Info
+    #define MANUFACTURER            "ZHILDE"
+    #define DEVICE                  "64EU_W"
+
+    // Based on https://templates.blakadder.com/ZLD64-EU-W.html ,
+    // This product uses GPIO1 for LED and 3 for the button, so hardware serial should be disabled...
+    #define DEBUG_SERIAL_SUPPORT    0
+
+    #define BUTTON1_PIN             3
+    #define BUTTON1_CONFIG          BUTTON_PUSHBUTTON | BUTTON_SET_PULLUP | BUTTON_DEFAULT_HIGH
+    #define BUTTON1_PRESS           BUTTON_ACTION_NONE
+    #define BUTTON1_RELAY           3
+
+    #define RELAY1_PIN              5
+    #define RELAY2_PIN              4
+    #define RELAY3_PIN              14
+
     #define LED1_PIN                1
     #define LED1_PIN_INVERSE        1
 
@@ -2807,19 +2812,17 @@
     // Buttons
     #define BUTTON1_PIN             12
     #define BUTTON1_RELAY           1
-    #define BUTTON1_CONFIG          BUTTON_SWITCH | BUTTON_DEFAULT_HIGH //Hardware Pullup
+    #define BUTTON1_CONFIG          BUTTON_SWITCH | BUTTON_DEFAULT_BOOT //Hardware Pullup
 
-    #define BUTTON1_PRESS           BUTTON_ACTION_NONE
-    #define BUTTON1_CLICK           BUTTON_ACTION_TOGGLE
-    #define BUTTON1_DBLCLICK        BUTTON_ACTION_NONE
-    #define BUTTON1_LNGCLICK        BUTTON_ACTION_NONE
-    #define BUTTON1_LNGLNGCLICK     BUTTON_ACTION_NONE
+    #define BUTTON1_PRESS           BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE         BUTTON_ACTION_TOGGLE
 
     #define BUTTON2_PIN             13
     #define BUTTON2_RELAY           2
-    #define BUTTON2_CONFIG          BUTTON_SWITCH | BUTTON_DEFAULT_HIGH //Hardware Pullup
+    #define BUTTON2_CONFIG          BUTTON_SWITCH | BUTTON_DEFAULT_BOOT //Hardware Pullup
 
-    #define BUTTON2_CLICK          BUTTON_ACTION_TOGGLE
+    #define BUTTON2_PRESS           BUTTON_ACTION_TOGGLE
+    #define BUTTON2_RELEASE         BUTTON_ACTION_TOGGLE
 
     // Relays
     #define RELAY1_PIN              4
@@ -3389,6 +3392,109 @@
     #define DEBUG_SERIAL_SUPPORT 0
 
 // ----------------------------------------------------------------------------------------
+//  Power socket 16A similar to BLITZWOLF_BWSHPX but button pin differs
+//  IMPORTANT, This template is for hardware version SP111_A_Wifi_Ver1.1 (as printed on the PCB)
+//  hhttps://www.amazon.de/-/en/Smallest-Consumption-Measuring-Function-Compatible/dp/B07PSMF47W
+// ----------------------------------------------------------------------------------------
+
+#elif defined(GOSUND_SP111)
+
+    // Info
+    #define MANUFACTURER                "GOSUND"
+    #define DEVICE                      "SP111"
+
+   // Buttons
+    #define BUTTON1_PIN                 13
+    #define BUTTON1_CONFIG              BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
+    #define BUTTON1_RELAY               1
+
+    // Relays
+    #define RELAY1_PIN                  15
+    #define RELAY1_TYPE                 RELAY_TYPE_NORMAL
+
+    // LEDs
+    #define LED1_PIN                    2
+    #define LED1_PIN_INVERSE            1
+    #define LED2_PIN                    0
+    #define LED2_PIN_INVERSE            1
+    #define LED2_MODE                   LED_MODE_FINDME
+    #define LED2_RELAY                  1
+
+    // HJL01 / BL0937
+    #ifndef HLW8012_SUPPORT
+    #define HLW8012_SUPPORT             1
+    #endif
+    #define HLW8012_SEL_PIN             12
+    #define HLW8012_CF1_PIN             4
+    #define HLW8012_CF_PIN              5
+
+    #define HLW8012_SEL_CURRENT         LOW
+    #define HLW8012_CURRENT_RATIO       25740
+    #define HLW8012_VOLTAGE_RATIO       313400
+    #define HLW8012_POWER_RATIO         3414290
+    #define HLW8012_INTERRUPT_ON        FALLING
+
+// ----------------------------------------------------------------------------------------
+//  Power strip 15A - 3 Sockets + 3 USB ports 
+//  This device uses just one digital button (main one). All other three buttons are connected 
+//  to the ADC pin via resistors with different values. This approach is known under the name of
+//  "Resistor Ladder" - https://en.wikipedia.org/wiki/Resistor_ladder
+//  https://www.amazon.de/-/en/gp/product/B085XXCPRD
+// ----------------------------------------------------------------------------------------
+
+#elif defined(GOSUND_P1)
+
+    // Info
+    #define MANUFACTURER                "GOSUND"
+    #define DEVICE                      "P1"
+
+    
+    //Enable this to view buttons analog level.
+    //Or, use adc terminal command
+    //#define ANALOG_SUPPORT                1
+
+    // Disable UART noise
+    #define DEBUG_SERIAL_SUPPORT            0
+
+    // Buttons
+    #define BUTTON_PROVIDER_GPIO_SUPPORT    1
+    #define BUTTON_PROVIDER_ANALOG_SUPPORT  1
+
+    #define BUTTON1_PIN                     16
+    #define BUTTON1_CONFIG                  BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
+    #define BUTTON1_RELAY                   4
+
+    #define BUTTON2_PIN                     17
+    #define BUTTON2_RELAY                   3
+    #define BUTTON2_PROVIDER                BUTTON_PROVIDER_ANALOG
+    #define BUTTON2_ANALOG_LEVEL            220
+
+    #define BUTTON3_PIN                     17
+    #define BUTTON3_RELAY                   2
+    #define BUTTON3_PROVIDER                BUTTON_PROVIDER_ANALOG
+    #define BUTTON3_ANALOG_LEVEL            470
+
+    #define BUTTON4_PIN                     17
+    #define BUTTON4_RELAY                   1
+    #define BUTTON4_PROVIDER                BUTTON_PROVIDER_ANALOG
+    #define BUTTON4_ANALOG_LEVEL            730
+
+    // Relays
+    #define RELAY1_PIN                      14
+    #define RELAY2_PIN                      12
+    #define RELAY3_PIN                      13
+    #define RELAY4_PIN                      5
+    #define RELAY4_TYPE                     RELAY_TYPE_INVERSE
+
+    // LEDs
+    #define LED1_PIN                        2
+    #define LED1_PIN_INVERSE                1    
+
+    // CSE7766
+    #define CSE7766_SUPPORT                 1
+    #define CSE7766_RX_PIN                  3
+
+// ----------------------------------------------------------------------------------------
 //  Homecube 16A is similar but some pins differ and it also has RGB LEDs
 //  https://www.amazon.de/gp/product/B07D7RVF56/ref=oh_aui_detailpage_o00_s01?ie=UTF8&psc=1
 // ----------------------------------------------------------------------------------------
@@ -3494,9 +3600,7 @@
     // Info
     #define MANUFACTURER                "GENERIC"
     #define DEVICE                      "AG_L4"
-    #define RELAY_PROVIDER              RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER              LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT           1
 
     // button 1: "power" button
     #define BUTTON1_PIN                 4
@@ -3538,9 +3642,7 @@
     // Info
     #define MANUFACTURER                "GENERIC"
     #define DEVICE                      "AG_L4_V3"
-    #define RELAY_PROVIDER              RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER              LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT           1
 
     // button 1: "power" button
     #define BUTTON1_PIN                 13
@@ -3585,8 +3687,11 @@
 
     // Buttons
     #define BUTTON1_PIN         5
-    #define BUTTON1_CONFIG      BUTTON_SWITCH
+    #define BUTTON1_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT
     #define BUTTON1_RELAY       1
+
+    #define BUTTON1_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE     BUTTON_ACTION_TOGGLE
 
     // Relays
     #define RELAY1_PIN          4
@@ -3600,11 +3705,18 @@
 
     // Buttons
     #define BUTTON1_PIN         12
-    #define BUTTON2_PIN         14
-    #define BUTTON1_CONFIG      BUTTON_SWITCH
-    #define BUTTON2_CONFIG      BUTTON_SWITCH
     #define BUTTON1_RELAY       1
+    #define BUTTON1_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT
+
+    #define BUTTON1_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE     BUTTON_ACTION_TOGGLE
+
+    #define BUTTON2_PIN         14
+    #define BUTTON2_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT
     #define BUTTON2_RELAY       2
+
+    #define BUTTON2_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON2_RELEASE     BUTTON_ACTION_TOGGLE
 
     // Relays
     #define RELAY1_PIN          4
@@ -3619,8 +3731,11 @@
 
     // Buttons
     #define BUTTON1_PIN         4
-    #define BUTTON1_CONFIG      BUTTON_SWITCH
+    #define BUTTON1_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT
     #define BUTTON1_RELAY       1
+
+    #define BUTTON1_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE     BUTTON_ACTION_TOGGLE
 
     #define BUTTON2_PIN         2
     #define BUTTON2_CONFIG      BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
@@ -3662,12 +3777,18 @@
 
     // Buttons
     #define BUTTON1_PIN         13
-    #define BUTTON1_CONFIG      BUTTON_SWITCH
+    #define BUTTON1_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT
     #define BUTTON1_RELAY       1
 
+    #define BUTTON1_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON1_RELEASE     BUTTON_ACTION_TOGGLE
+
     #define BUTTON2_PIN         5
-    #define BUTTON2_CONFIG      BUTTON_SWITCH
+    #define BUTTON2_CONFIG      BUTTON_SWITCH | BUTTON_DEFAULT_BOOT
     #define BUTTON2_RELAY       2
+
+    #define BUTTON2_PRESS       BUTTON_ACTION_TOGGLE
+    #define BUTTON2_RELEASE     BUTTON_ACTION_TOGGLE
 
     #define BUTTON3_PIN         2
     #define BUTTON3_CONFIG      BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
@@ -3747,9 +3868,7 @@
     // Info
     #define MANUFACTURER        "LOHAS"
     #define DEVICE              "E27_9W"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -3768,9 +3887,7 @@
     // Info
     #define MANUFACTURER        "LOHAS"
     #define DEVICE              "E26_A19"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -3787,9 +3904,7 @@
     // Info
     #define MANUFACTURER        "TECKIN"
     #define DEVICE              "SB53"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -3828,9 +3943,7 @@
     #define BUTTON2_LNGLNGCLICK     BUTTON_ACTION_RESET
 
     // Light
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
     #define LIGHT_STEP          8
     #define LIGHT_CHANNELS      2
     #define LIGHT_CH1_PIN       5   // warm white
@@ -3859,9 +3972,7 @@
     // Info
     #define MANUFACTURER        "PHYX"
     #define DEVICE              "ESP12_RGB"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      3
@@ -3879,9 +3990,7 @@
     // Info
     #define MANUFACTURER        "IWOOLE"
     #define DEVICE              "LED_TABLE_LAMP"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -3900,9 +4009,7 @@
     // Info
     #define MANUFACTURER        "GENERIC"
     #define DEVICE              "GU10"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -3921,9 +4028,7 @@
     // Info
     #define MANUFACTURER        "GENERIC"
     #define DEVICE              "E14"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -3941,9 +4046,7 @@
     // Info
     #define MANUFACTURER        "DELTACO"
     #define DEVICE              "SH_LEXXW"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      2
@@ -3959,9 +4062,7 @@
     // Info
     #define MANUFACTURER        "DELTACO"
     #define DEVICE              "SH_LEXXRGB"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -3981,9 +4082,7 @@
     // Info
     #define MANUFACTURER        "NEXETE"
     #define DEVICE              "A19"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -4001,9 +4100,7 @@
     // Info
     #define MANUFACTURER        "LOMBEX"
     #define DEVICE              "LUX_NOVA2_TUNABLE_WHITE"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      5
@@ -4024,9 +4121,7 @@
     // Info
     #define MANUFACTURER        "LOMBEX"
     #define DEVICE              "LUX_NOVA2_WHITE_COLOR"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -4083,9 +4178,7 @@
     #define RELAY1_TYPE         RELAY_TYPE_NORMAL
 
     // Light RGBW
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       5       // RED
@@ -4121,9 +4214,7 @@
     //Blue  LED: 2
 
     // Light
-    #define RELAY_PROVIDER              RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER              LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT           1
     #define LIGHT_CHANNELS              3
     #define LIGHT_CH1_PIN               0       // RED
     #define LIGHT_CH2_PIN               4       // GREEN
@@ -4223,17 +4314,19 @@
     #define MANUFACTURER            "FOXEL"
     #define DEVICE                  "LIGHTFOX_DUAL"
     #define SERIAL_BAUDRATE         19200
-    #define RELAY_PROVIDER          RELAY_PROVIDER_DUAL
-    #define DUMMY_RELAY_COUNT       2
-    #define DEBUG_SERIAL_SUPPORT    0
 
-    // Buttons
-    #define BUTTON1_RELAY           1
-    #define BUTTON2_RELAY           2
-    #define BUTTON3_RELAY           2
-    #define BUTTON4_RELAY           1
+    // Relays
+    #define RELAY_PROVIDER_DUAL_SUPPORT 1
 
-    #define BUTTON_EVENTS_SOURCE    BUTTON_EVENTS_SOURCE_FOXEL_LIGHTFOX_DUAL
+    #define RELAY1_PROVIDER         RELAY_PROVIDER_DUAL
+    #define RELAY2_PROVIDER         RELAY_PROVIDER_DUAL
+
+    // No need to include generic GPIO support
+    // "Buttons" are attached to a secondary MCU and RELAY_PROVIDER_DUAL handles that
+    #define BUTTON_PROVIDER_GPIO_SUPPORT    0
+
+    // Conflicts with relay operation
+    #define DEBUG_SERIAL_SUPPORT            0
 
 // -----------------------------------------------------------------------------
 // Teckin SP20
@@ -4327,9 +4420,7 @@
     // Info
     #define MANUFACTURER        "PSH"
     #define DEVICE              "RGBW_CONTROLLER"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // LEDs
     #define LED1_PIN            13
@@ -4394,10 +4485,8 @@
     #define MANUFACTURER        "TUYA"
     #define DEVICE              "GENERIC_DIMMER"
 
-    #define LIGHT_PROVIDER      LIGHT_PROVIDER_TUYA
-    #define LIGHT_CHANNELS      0
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
-    #define DUMMY_RELAY_COUNT   0
+    #define TUYA_SUPPORT        1
+    #define LIGHT_PROVIDER      LIGHT_PROVIDER_CUSTOM
 
 // -----------------------------------------------------------------------------
 // Etekcity ESW01-USA
@@ -4524,9 +4613,7 @@
     // Info
     #define MANUFACTURER        "MUVIT_IO"
     #define DEVICE              "MIOBULB001"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light
     #define LIGHT_CHANNELS      4
@@ -4579,9 +4666,6 @@
     #define HLW8012_POWER_RATIO         3414290
     #define HLW8012_INTERRUPT_ON        FALLING
 
-    #define SENSOR_ENERGY_UNITS         ENERGY_KWH
-    #define SENSOR_POWER_UNITS          POWER_WATTS
-
 // -----------------------------------------------------------------------------
 // Kogan Smarter Home Plug with Energy Meter (Australia)
 // Product code: KASPEMHA
@@ -4627,9 +4711,6 @@
     #define HLW8012_POWER_RATIO         3414290
     #define HLW8012_INTERRUPT_ON        FALLING
 
-    #define SENSOR_ENERGY_UNITS         ENERGY_KWH
-    #define SENSOR_POWER_UNITS          POWER_WATTS
-
 // -----------------------------------------------------------------------------
 // KINGART_CURTAIN_SWITCH
 // -----------------------------------------------------------------------------
@@ -4661,9 +4742,7 @@
     // Info
     #define MANUFACTURER        "LSC"
     #define DEVICE              "SMART_LED_LIGHT_STRIP"
-    #define RELAY_PROVIDER      RELAY_PROVIDER_LIGHT
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
-    #define DUMMY_RELAY_COUNT   1
 
     // Light RGBW
     #define LIGHT_CHANNELS      4
@@ -4817,7 +4896,7 @@
 // -----------------------------------------------------------------------------
 // Prodino WIFI
 // https://kmpelectronics.eu/products/prodino-wifi-v1/
-// -------------------------------------
+// -----------------------------------------------------------------------------
 
 #elif defined(PRODINO_WIFI)
 
@@ -4829,37 +4908,100 @@
     #define MCP23S08_SUPPORT        1
 
     // Relays
-    #define RELAY_PROVIDER          RELAY_PROVIDER_MCP23S08
     #define RELAY1_PIN              4
+    #define RELAY1_PIN_TYPE         GPIO_TYPE_MCP23S08
+
     #define RELAY2_PIN              5
+    #define RELAY2_PIN_TYPE         GPIO_TYPE_MCP23S08
+
     #define RELAY3_PIN              6
+    #define RELAY3_PIN_TYPE         GPIO_TYPE_MCP23S08
+
     #define RELAY4_PIN              7
+    #define RELAY4_PIN_TYPE         GPIO_TYPE_MCP23S08
 
     // Buttons
     #define BUTTON1_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
     #define BUTTON1_PIN             0
+    #define BUTTON1_PIN_TYPE        GPIO_TYPE_MCP23S08
 
     #define BUTTON2_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
     #define BUTTON2_PIN             1
+    #define BUTTON2_PIN_TYPE        GPIO_TYPE_MCP23S08
 
     #define BUTTON3_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
     #define BUTTON3_PIN             2
+    #define BUTTON3_PIN_TYPE        GPIO_TYPE_MCP23S08
 
     #define BUTTON4_CONFIG          BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH
     #define BUTTON4_PIN             3
+    #define BUTTON4_PIN_TYPE        GPIO_TYPE_MCP23S08
 
     #define BUTTON1_RELAY           1
     #define BUTTON2_RELAY           2
     #define BUTTON3_RELAY           3
     #define BUTTON4_RELAY           4
 
-    #define BUTTON_EVENTS_SOURCE    BUTTON_EVENTS_SOURCE_MCP23S08
-
     // LEDs
     #define LED1_PIN                2
     #define LED1_PIN_INVERSE        1
 
 // -----------------------------------------------------------------------------
+// Fcmila E27 7W RGB+W Bulb
+// https://www.aliexpress.com/item/32925895199.html
+// -----------------------------------------------------------------------------
+
+#elif defined(FCMILA_E27_7W_RGBW)
+
+    // Info
+    #define MANUFACTURER        "FCMILA"
+    #define DEVICE              "E27_7W_RGBW"
+    #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
+
+    // Light
+    #define LIGHT_CHANNELS      4
+    #define LIGHT_CH1_PIN       4       // RED
+    #define LIGHT_CH2_PIN       12      // GREEN
+    #define LIGHT_CH3_PIN       14      // BLUE
+    #define LIGHT_CH4_PIN       5       // WHITE
+
+// -----------------------------------------------------------------------------
+// Benexmart 5W GU5.3 (MR16) RGBWW
+// https://www.aliexpress.com/item/4001245365644.html
+// -----------------------------------------------------------------------------
+
+#elif defined(BENEXMART_GU53_RGBWW)
+
+    // Info
+    #define MANUFACTURER        "BENEXMART"
+    #define DEVICE              "GU53_RGBWW"
+    #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
+
+    // Light
+    #define LIGHT_CHANNELS      5
+    #define LIGHT_CH1_PIN       4       // RED
+    #define LIGHT_CH2_PIN       12      // GREEN
+    #define LIGHT_CH3_PIN       14      // BLUE
+    #define LIGHT_CH4_PIN       5       // WARM WHITE
+    #define LIGHT_CH5_PIN       13      // COLD WHITE
+
+// LSC E27 10W White Bulb with TYLC6E ESP8266 module
+// https://www.action.com/de-at/p/lsc-smart-connect-intelligente-led-lampe/
+// -----------------------------------------------------------------------------
+
+#elif defined(LSC_E27_10W_WHITE)
+
+    // Info
+    #define MANUFACTURER                  "LSC"
+    #define DEVICE                        "E27_10W_WHITE"
+    #define LIGHT_PROVIDER                LIGHT_PROVIDER_DIMMER
+
+    // Light
+    #define LIGHT_CHANNELS      2
+    #define LIGHT_CH1_PIN                 5       // WARM WHITE LED PWM PIN
+    #define LIGHT_CH1_INVERSE             0
+    #define LIGHT_CH2_PIN                 4       // COLD WHITE LED PWM PIN
+    #define LIGHT_CH2_INVERSE             0
 
 #else
 

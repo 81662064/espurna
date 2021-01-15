@@ -49,11 +49,6 @@
 #define MQTT_SUPPORT                1
 #endif
 
-#if RF_SUPPORT
-#undef RELAY_SUPPORT
-#define RELAY_SUPPORT               1
-#endif
-
 #if LED_SUPPORT
 #undef BROKER_SUPPORT
 #define BROKER_SUPPORT              1               // If LED is enabled enable BROKER to supply status changes
@@ -107,11 +102,13 @@
 #define TELNET_SERVER_ASYNC_BUFFERED 1         // enable buffered telnet by default on latest Cores
 #endif
 
-#if LIGHT_PROVIDER == LIGHT_PROVIDER_TUYA
-#undef TUYA_SUPPORT
-#define TUYA_SUPPORT                1           // Need base Tuya module for this to work
+#if TUYA_SUPPORT
+#undef LIGHT_TRANSITION_TIME
+#define LIGHT_TRANSITION_TIME       1600       // longer transition than the default
+#undef LIGHT_TRANSITION_STEP
+#define LIGHT_TRANSITION_STEP       200        // step can't be 10ms since most tuya serial connections are not fast
 #undef LIGHT_USE_TRANSITIONS
-#define LIGHT_USE_TRANSITIONS       0           // TODO: temporary, maybe slower step instead?
+#define LIGHT_USE_TRANSITIONS       0          // also, disable transitions unless set at runtime
 #endif
 
 #if TUYA_SUPPORT
@@ -133,6 +130,11 @@
 #define TERMINAL_SUPPORT            1           // Need terminal command line parser and commands
 #undef MQTT_SUPPORT
 #define MQTT_SUPPORT                1           // Subscribe and publish things
+#endif
+
+#if IFAN_SUPPORT
+#undef RELAY_SUPPORT
+#define RELAY_SUPPORT               1            // Need relays to manage general state
 #endif
 
 //------------------------------------------------------------------------------
@@ -190,18 +192,6 @@
 #endif
 
 //------------------------------------------------------------------------------
-// When using Dual / Lightfox Dual, notify that Serial should be used
-
-#if (BUTTON_EVENTS_SOURCE == BUTTON_EVENTS_SOURCE_ITEAD_SONOFF_DUAL) || \
-    (BUTTON_EVENTS_SOURCE == BUTTON_EVENTS_SOURCE_FOXEL_LIGHTFOX_DUAL)
-#if DEBUG_SERIAL_SUPPORT
-#warning "DEBUG_SERIAL_SUPPORT conflicts with the current BUTTON_EVENTS_SOURCE"
-#undef DEBUG_SERIAL_SUPPORT
-#define DEBUG_SERIAL_SUPPORT 0
-#endif
-#endif
-
-//------------------------------------------------------------------------------
 // It looks more natural that one click will enable display
 // and long click will switch relay
 
@@ -214,10 +204,34 @@
 
 //------------------------------------------------------------------------------
 // We should always set MQTT_MAX_PACKET_SIZE
-//
 
 #if MQTT_LIBRARY == MQTT_LIBRARY_PUBSUBCLIENT
 #if not defined(MQTT_MAX_PACKET_SIZE)
 #warning "MQTT_MAX_PACKET_SIZE should be set in `build_flags = ...` of the environment! Default value is used instead."
 #endif
+#endif
+
+//------------------------------------------------------------------------------
+// Disable BME680 support if using Core version 2.3.0 due to memory constraints.
+
+#if BME680_SUPPORT && defined(ARDUINO_ESP8266_RELEASE_2_3_0)
+#warning "BME680_SUPPORT is not available when using Arduino Core 2.3.0 due to memory constraints. Please use Arduino Core 2.6.3+ instead (or set `platform = ${common.platform_latest}` for the latest version)."
+#undef BME680_SUPPORT
+#define BME680_SUPPORT 0
+#endif
+
+//------------------------------------------------------------------------------
+// Prometheus needs web server + request handler API
+
+#if PROMETHEUS_SUPPORT
+#undef WEB_SUPPORT
+#define WEB_SUPPORT 1
+#endif
+
+//------------------------------------------------------------------------------
+// Analog pin needs ADC_TOUT mode set up at compile time
+
+#if BUTTON_PROVIDER_ANALOG_SUPPORT
+#undef ADC_MODE_VALUE
+#define ADC_MODE_VALUE ADC_TOUT
 #endif

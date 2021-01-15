@@ -41,6 +41,8 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
     #include "static/index.rfm69.html.gz.h"
 #elif WEBUI_IMAGE == WEBUI_IMAGE_LIGHTFOX
     #include "static/index.lightfox.html.gz.h"
+#elif WEBUI_IMAGE == WEBUI_IMAGE_GARLAND
+    #include "static/index.garland.html.gz.h"
 #elif WEBUI_IMAGE == WEBUI_IMAGE_THERMOSTAT
     #include "static/index.thermostat.html.gz.h"
 #elif WEBUI_IMAGE == WEBUI_IMAGE_CURTAIN
@@ -203,7 +205,7 @@ size_t AsyncWebPrint::write(const uint8_t* data, size_t size) {
 
 // -----------------------------------------------------------------------------
 
-AsyncWebServer * _server;
+AsyncWebServer* _server;
 char _last_modified[50];
 std::vector<uint8_t> * _webConfigBuffer;
 bool _webConfigSuccess = false;
@@ -238,7 +240,7 @@ void _onDiscover(AsyncWebServerRequest *request) {
     StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["app"] = APP_NAME;
-    root["version"] = APP_VERSION;
+    root["version"] = getVersion().c_str();
     root["device"] = device.c_str();
     root["hostname"] = hostname.c_str();
 
@@ -265,8 +267,8 @@ void _onGetConfig(AsyncWebServerRequest *request) {
     response->addHeader("X-Content-Type-Options", "nosniff");
     response->addHeader("X-Frame-Options", "deny");
 
-    response->printf("{\n\"app\": \"%s\"", APP_NAME);
-    response->printf(",\n\"version\": \"%s\"", APP_VERSION);
+    response->printf("{\n\"app\": \"" APP_NAME "\"");
+    response->printf(",\n\"version\": \"%s\"", getVersion().c_str());
     response->printf(",\n\"backup\": \"1\"");
     #if NTP_SUPPORT
         response->printf(",\n\"timestamp\": \"%s\"", ntpDateTime().c_str());
@@ -469,10 +471,11 @@ void _onRequest(AsyncWebServerRequest *request){
 
     if (!_onAPModeRequest(request)) return;
 
-    // Send request to subscribers
-    for (unsigned char i = 0; i < _web_request_callbacks.size(); i++) {
-        bool response = (_web_request_callbacks[i])(request);
-        if (response) return;
+    // Send request to subscribers, break when request is 'handled' by the callback
+    for (auto& callback : _web_request_callbacks) {
+        if (callback(request)) {
+            return;
+        }
     }
 
     // No subscriber handled the request, return a 404 with implicit "Connection: close"
@@ -513,8 +516,8 @@ bool webAuthenticate(AsyncWebServerRequest *request) {
 
 // -----------------------------------------------------------------------------
 
-AsyncWebServer * webServer() {
-    return _server;
+AsyncWebServer& webServer() {
+    return *_server;
 }
 
 void webBodyRegister(web_body_callback_f callback) {
@@ -535,22 +538,37 @@ uint16_t webPort() {
 }
 
 void webLog(AsyncWebServerRequest *request) {
-    DEBUG_MSG_P(PSTR("[WEBSERVER] Request: %s %s\n"), request->methodToString(), request->url().c_str());
+    DEBUG_MSG_P(PSTR("[WEBSERVER] %s %s\n"), request->methodToString(), request->url().c_str());
 }
+
+class WebAccessLogHandler : public AsyncWebHandler {
+    bool canHandle(AsyncWebServerRequest* request) override {
+        webLog(request);
+        return false;
+    }
+};
 
 void webSetup() {
 
     // Cache the Last-Modifier header value
     snprintf_P(_last_modified, sizeof(_last_modified), PSTR("%s %s GMT"), __DATE__, __TIME__);
 
-    // Create server
+    // Create server and install global URL debug handler
+    // (since we don't want to forcibly add it to each instance)
     unsigned int port = webPort();
     _server = new AsyncWebServer(port);
+
+#if DEBUG_SUPPORT
+    if (getSetting("webAccessLog", (1 == WEB_ACCESS_LOG))) {
+        static WebAccessLogHandler log;
+        _server->addHandler(&log);
+    }
+#endif
 
     // Rewrites
     _server->rewrite("/", "/index.html");
 
-    // Serve home (basic authentication protection)
+    // Serve home (basic authentication protection is done manually b/c the handler is installed through callback functions)
     #if WEB_EMBEDDED
         _server->on("/index.html", HTTP_GET, _onHome);
     #endif

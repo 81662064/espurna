@@ -64,6 +64,31 @@ $.fn.enterKey = function (fnc) {
     });
 };
 
+function followScroll(id, threshold) {
+    if (threshold === undefined) {
+        threshold = 90;
+    }
+
+    var elem = document.getElementById(id);
+    var offset = (elem.scrollTop + elem.offsetHeight) / elem.scrollHeight * 100;
+    if (offset > threshold) {
+        elem.scrollTop = elem.scrollHeight;
+    }
+}
+
+function fromSchema(source, schema) {
+    if (schema.length !== source.length) {
+        throw "Schema mismatch!";
+    }
+
+    var target = {};
+    schema.forEach(function(key, index) {
+        target[key] = source[index];
+    });
+
+    return target;
+}
+
 function keepTime() {
 
     $("span[name='ago']").html(ago);
@@ -80,34 +105,6 @@ function keepTime() {
 
 function zeroPad(number, positions) {
     return number.toString().padStart(positions, "0");
-}
-
-function loadTimeZones() {
-
-    var time_zones = [
-        -720, -660, -600, -570, -540,
-        -480, -420, -360, -300, -240,
-        -210, -180, -120, -60, 0,
-        60, 120, 180, 210, 240,
-        270, 300, 330, 345, 360,
-        390, 420, 480, 510, 525,
-        540, 570, 600, 630, 660,
-        720, 765, 780, 840
-    ];
-
-    for (var i in time_zones) {
-        var tz = time_zones[i];
-        var offset = tz >= 0 ? tz : -tz;
-        var text = "GMT" + (tz >= 0 ? "+" : "-") +
-            zeroPad(parseInt(offset / 60, 10), 2) + ":" +
-            zeroPad(offset % 60, 2);
-        $("select[name='ntpOffset']").append(
-            $("<option></option>")
-                .attr("value", tz)
-                .text(text)
-        );
-    }
-
 }
 
 function validatePassword(password) {
@@ -164,9 +161,9 @@ function validateFormHostname(form) {
     // No other symbols, punctuation characters, or blank spaces are permitted.
 
     // Negative lookbehind does not work in Javascript
-    // var re_hostname = new RegExp('^(?!-)[A-Za-z0-9-]{1,31}(?<!-)$');
+    // var re_hostname = new RegExp('^(?!-)[A-Za-z0-9-]{1,32}(?<!-)$');
 
-    var re_hostname = new RegExp('^(?!-)[A-Za-z0-9-]{0,30}[A-Za-z0-9]$');
+    var re_hostname = new RegExp('^(?!-)[A-Za-z0-9-]{0,31}[A-Za-z0-9]$');
 
     var hostname = $("input[name='hostname']", form);
     if ("true" !== hostname.attr("hasChanged")) {
@@ -800,6 +797,7 @@ function doDebugCommand() {
     var command = el.val();
     el.val("");
     sendAction("dbgcmd", {command: command});
+    followScroll("weblog", 0);
     return false;
 }
 
@@ -1113,28 +1111,49 @@ function addSchedule(values) {
 // Relays
 // -----------------------------------------------------------------------------
 
+function initRelayFromSchema(id, relay, schema) {
+    var result = fromSchema(relay, schema)
+    if (!result.name.length) {
+        result.name = "Switch #" + id;
+    }
+
+    return result;
+}
+
 function initRelays(data) {
 
     var current = $("#relays > div").length;
     if (current > 0) { return; }
 
+    var schema = data.schema;
     var template = $("#relayTemplate .pure-g")[0];
-    for (var i=0; i<data.length; i++) {
 
-        // Add relay fields
+    data["relays"].forEach(function(relay, id) {
+        var _relay = initRelayFromSchema(id, relay, schema);
+
         var line = $(template).clone();
-        $(".id", line).html(i);
-        $(":checkbox", line).prop('checked', data[i]).attr("data", i)
-            .prop("id", "relay" + i)
+
+        $("span.relay-name", line)
+            .text(_relay.name)
+            .attr("data", id);
+
+        $(":checkbox", line)
+            .prop('checked', false)
+            .prop('disabled', true)
+            .attr("data", id)
+            .prop("id", "relay" + id)
             .on("change", function (event) {
-                var id = parseInt($(event.target).attr("data"), 10);
+                var target= parseInt($(event.target).attr("data"), 10);
                 var status = $(event.target).prop("checked");
-                doToggle(id, status);
+                doToggle(target, status);
             });
-        $("label.toggle", line).prop("for", "relay" + i)
+
+        $("label.toggle", line)
+            .prop("for", "relay" + id)
+
         line.appendTo("#relays");
 
-    }
+    });
 
 }
 
@@ -1169,49 +1188,49 @@ function initRelayConfig(data) {
     var current = $("#relayConfig > legend").length; // there is a legend per relay
     if (current > 0) { return; }
 
-    var size = data.size;
-    var start = data.start;
-
     var template = $("#relayConfigTemplate").children();
+    var schema = data.schema;
 
-    for (var i=start; i<size; ++i) {
+    data["relays"].forEach(function(relay, id) {
+        var _relay = initRelayFromSchema(id, relay, schema);
         var line = $(template).clone();
 
-        $("span.id", line).html(i);
-        $("span.gpio", line).html(data.gpio[i]);
-        $("select[name='relayBoot']", line).val(data.boot[i]);
-        $("select[name='relayPulse']", line).val(data.pulse[i]);
-        $("input[name='relayTime']", line).val(data.pulse_time[i]);
+        $("span.name", line).html(_relay.name);
+        $("span.prov", line).html(_relay.prov);
+        $("select[name='relayBoot']", line).val(_relay.boot);
+        $("select[name='relayPulse']", line).val(_relay.pulse);
+        $("input[name='relayTime']", line).val(_relay.pulse_time);
 
-        if ("sch_last" in data) {
+        if (schema.includes("sch_last")) {
             $("input[name='relayLastSch']", line)
-                .prop('checked', data.sch_last[i])
-                .attr("id", "relayLastSch" + i)
-                .attr("name", "relayLastSch" + i)
-                .next().attr("for","relayLastSch" + (i));
+                .prop("checked", _relay.sch_last)
+                .attr("id", "relayLastSch" + id)
+                .attr("name", "relayLastSch" + id)
+                .next().attr("for","relayLastSch" + (id));
         }
 
-        if ("group" in data) {
-            $("input[name='mqttGroup']", line).val(data.group[i]);
+        if (schema.includes("group")) {
+            $("input[name='mqttGroup']", line).val(_relay.group);
         }
-        if ("group_sync" in data) {
-            $("select[name='mqttGroupSync']", line).val(data.group_sync[i]);
+        if (schema.includes("group_sync")) {
+            $("select[name='mqttGroupSync']", line).val(_relay.group_sync);
         }
-        if ("on_disc" in data) {
-            $("select[name='relayOnDisc']", line).val(data.on_disc[i]);
+        if (schema.includes("on_disc")) {
+            $("select[name='relayOnDisc']", line).val(_relay.on_disc);
         }
 
         setOriginalsFromValues($("input,select", line));
         line.appendTo("#relayConfig");
 
-        // Populate the relay SELECTs
+        // Populate the relay SELECTs on the configuration panel
         $("select.isrelay").append(
             $("<option></option>")
-                .attr("value", i)
-                .text("Switch #" + i)
+                .attr("value", id)
+                .text(name)
         );
 
-    }
+        ++id;
+    });
 
 }
 
@@ -1556,10 +1575,10 @@ function processData(data) {
     // title
     if ("app_name" in data) {
         var title = data.app_name;
-		if ("app_version" in data) {
-			title = title + " " + data.app_version;
-		}
-        $("span[name=title]").html(title);
+        if ("app_version" in data) {
+            $("span[name=title]").html(data.app_version);
+            title = title + " " + data.app_version;
+        }
         if ("hostname" in data) {
             title = data.hostname + " - " + title;
         }
@@ -1914,17 +1933,7 @@ function processData(data) {
         if ("wifi" === key) {
             maxNetworks = parseInt(value["max"], 10);
             value["networks"].forEach(function(network) {
-                var schema = value["schema"];
-                if (schema.length !== network.length) {
-                    throw "WiFi schema mismatch!";
-                }
-
-                var _network = {};
-                schema.forEach(function(key, index) {
-                    _network[key] = network[index];
-                });
-
-                addNetwork(_network);
+                addNetwork(fromSchema(network, value.schema));
             });
             return;
         }
@@ -1969,15 +1978,14 @@ function processData(data) {
         // Relays
         // ---------------------------------------------------------------------
 
-        if ("relayState" === key) {
-            initRelays(value.status);
-            updateRelays(value);
+        if ("relayConfig" === key) {
+            initRelays(value);
+            initRelayConfig(value);
             return;
         }
 
-        // Relay configuration
-        if ("relayConfig" === key) {
-            initRelayConfig(value);
+        if ("relayState" === key) {
+            updateRelays(value);
             return;
         }
 
@@ -2006,20 +2014,13 @@ function processData(data) {
 
             var schema = value["schema"];
             value["list"].forEach(function(led_data, index) {
-                if (schema.length !== led_data.length) {
-                    throw "LED schema mismatch!";
-                }
-
-                var led = {};
-                schema.forEach(function(key, index) {
-                    led[key] = led_data[index];
-                });
-
                 var line = $($("#ledConfigTemplate").children()).clone();
 
                 $("span.id", line).html(index);
                 $("select", line).attr("data", index);
                 $("input", line).attr("data", index);
+
+                var led = fromSchema(led_data, schema);
 
                 $("select[name='ledGPIO']", line).val(led.GPIO);
                 // XXX: checkbox implementation depends on unique id
@@ -2109,7 +2110,7 @@ function processData(data) {
                 $("#weblog").append(new Text(msg[i]));
             }
 
-            $("#weblog").scrollTop($("#weblog")[0].scrollHeight - $("#weblog").height());
+            followScroll("weblog");
             return;
         }
 
@@ -2323,7 +2324,6 @@ function connectToCurrentURL() {
 $(function() {
 
     initMessages();
-    loadTimeZones();
     createCheckboxes();
     setInterval(function() { keepTime(); }, 1000);
 
@@ -2348,6 +2348,24 @@ $(function() {
     $(".button-settings-factory").on("click", doFactoryReset);
     $("#uploader").on("change", onFileUpload);
     $(".button-upgrade").on("click", doUpgrade);
+
+    <!-- removeIf(!garland)-->
+    $(".checkbox-garland-enable").on("change", function() {
+        sendAction("garland_switch", {status: $(this).prop("checked") ? 1 : 0});
+    });
+
+    $(".slider-garland-brightness").on("change", function() {
+        sendAction("garland_set_brightness", {brightness: $(this)[0].value});
+    });
+
+    $(".slider-garland-speed").on("change", function() {
+        sendAction("garland_set_speed", {speed: $(this)[0].value});
+    });
+
+    $(".button-garland-set-default").on("click", function() {
+        sendAction("garland_set_default", {});
+    });
+    <!-- endRemoveIf(!garland)-->
 
     <!-- removeIf(!thermostat)-->
     $(".button-thermostat-reset-counters").on('click', doResetThermostatCounters);

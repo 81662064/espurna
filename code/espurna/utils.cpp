@@ -60,8 +60,7 @@ const String& getManufacturer() {
 }
 
 String getBoardName() {
-    static const String defaultValue(F(DEVICE_NAME));
-    return getSetting("boardName", defaultValue);
+    return getSetting("boardName", F(DEVICE_NAME));
 }
 
 void setBoardName() {
@@ -105,6 +104,15 @@ const String& getCoreRevision() {
         #endif
     }
     return revision;
+}
+
+const String& getVersion() {
+#if defined(APP_REVISION)
+    static const String value(F(APP_VERSION APP_REVISION));
+#else
+    static const String value(F(APP_VERSION));
+#endif
+    return value;
 }
 
 int getHeartbeatMode() {
@@ -220,7 +228,7 @@ unsigned int getInitialFreeHeap() {
 // -----------------------------------------------------------------------------
 namespace Heartbeat {
 
-    enum Report : uint32_t { 
+    enum Report : uint32_t {
         Status = 1 << 1,
         Ssid = 1 << 2,
         Ip = 1 << 3,
@@ -284,16 +292,19 @@ namespace Heartbeat {
 }
 
 void infoUptime() {
-    const auto uptime [[gnu::unused]] = getUptime();
-    #if NTP_SUPPORT
-        DEBUG_MSG_P(
-            PSTR("[MAIN] Uptime: %02dd %02dh %02dm %02ds\n"),
-            elapsedDays(uptime), numberOfHours(uptime),
-            numberOfMinutes(uptime), numberOfSeconds(uptime)
-        );
-    #else
-        DEBUG_MSG_P(PSTR("[MAIN] Uptime: %lu seconds\n"), uptime);
-    #endif // NTP_SUPPORT
+#if NTP_SUPPORT
+    time_t uptime = getUptime();
+    tm spec;
+    gmtime_r(&uptime, &spec);
+
+    DEBUG_MSG_P(
+        PSTR("[MAIN] Uptime: %02dy %02dd %02dh %02dm %02ds\n"),
+        (spec.tm_year - 70), spec.tm_yday, spec.tm_hour,
+        spec.tm_min, spec.tm_sec
+    );
+#else
+    DEBUG_MSG_P(PSTR("[MAIN] Uptime: %lu seconds\n"), getUptime());
+#endif // NTP_SUPPORT
 }
 
 void heartbeat() {
@@ -338,7 +349,7 @@ void heartbeat() {
                 mqttSend(MQTT_TOPIC_APP, APP_NAME);
 
             if (hb_cfg & Heartbeat::Version)
-                mqttSend(MQTT_TOPIC_VERSION, APP_VERSION);
+                mqttSend(MQTT_TOPIC_VERSION, getVersion().c_str());
 
             if (hb_cfg & Heartbeat::Board)
                 mqttSend(MQTT_TOPIC_BOARD, getBoardName().c_str());
@@ -378,8 +389,10 @@ void heartbeat() {
             if (hb_cfg & Heartbeat::Freeheap)
                 mqttSend(MQTT_TOPIC_FREEHEAP, String(heap_stats.available).c_str());
 
+            #if RELAY_SUPPORT
             if (hb_cfg & Heartbeat::Relay)
                 relayMQTT();
+            #endif
 
             #if (LIGHT_PROVIDER != LIGHT_PROVIDER_NONE)
                 if (hb_cfg & Heartbeat::Light)
@@ -432,7 +445,7 @@ void heartbeat() {
 
         if ((hb_cfg & Heartbeat::Vcc) && (ADC_MODE_VALUE == ADC_VCC))
             idbSend(MQTT_TOPIC_VCC, String(ESP.getVcc()).c_str());
-                    
+
         if (hb_cfg & Heartbeat::Loadavg)
             idbSend(MQTT_TOPIC_LOADAVG, String(systemLoadAverage()).c_str());
 
@@ -539,11 +552,7 @@ void info(bool first) {
 
     // -------------------------------------------------------------------------
 
-    #if defined(APP_REVISION)
-        DEBUG_MSG_P(PSTR("[MAIN] " APP_NAME " " APP_VERSION " (" APP_REVISION ")\n"));
-    #else
-        DEBUG_MSG_P(PSTR("[MAIN] " APP_NAME " " APP_VERSION "\n"));
-    #endif
+    DEBUG_MSG_P(PSTR("[MAIN] " APP_NAME " %s\n"), getVersion().c_str());
     DEBUG_MSG_P(PSTR("[MAIN] " APP_AUTHOR "\n"));
     DEBUG_MSG_P(PSTR("[MAIN] " APP_WEBSITE "\n\n"));
     DEBUG_MSG_P(PSTR("[MAIN] CPU chip ID: 0x%06X\n"), ESP.getChipId());
@@ -551,7 +560,7 @@ void info(bool first) {
     DEBUG_MSG_P(PSTR("[MAIN] SDK version: %s\n"), ESP.getSdkVersion());
     DEBUG_MSG_P(PSTR("[MAIN] Core version: %s\n"), getCoreVersion().c_str());
     DEBUG_MSG_P(PSTR("[MAIN] Core revision: %s\n"), getCoreRevision().c_str());
-    DEBUG_MSG_P(PSTR("[MAIN] Build time: %lu\n"), __UNIX_TIMESTAMP__);
+    DEBUG_MSG_P(PSTR("[MAIN] Built: %s\n"), buildTime().c_str());
     DEBUG_MSG_P(PSTR("\n"));
 
     // -------------------------------------------------------------------------
@@ -792,11 +801,11 @@ char* strnstr(const char* buffer, const char* token, size_t n) {
 }
 
 // From a byte array to an hexa char array ("A220EE...", double the size)
-size_t hexEncode(uint8_t * in, size_t in_size, char * out, size_t out_size) {
+size_t hexEncode(const uint8_t * in, size_t in_size, char * out, size_t out_size) {
     if ((2 * in_size + 1) > (out_size)) return 0;
 
     static const char base16[] = "0123456789ABCDEF";
-    unsigned char index = 0;
+    size_t index = 0;
 
     while (index < in_size) {
         out[(index*2)]   = base16[(in[index] & 0xf0) >> 4];
@@ -811,11 +820,13 @@ size_t hexEncode(uint8_t * in, size_t in_size, char * out, size_t out_size) {
 
 
 // From an hexa char array ("A220EE...") to a byte array (half the size)
-size_t hexDecode(const char* in, size_t in_size, uint8_t* out, uint8_t out_size) {
-    if (out_size < (in_size / 2)) return 0;
+size_t hexDecode(const char* in, size_t in_size, uint8_t* out, size_t out_size) {
+    if ((in_size & 1) || (out_size < (in_size / 2))) {
+        return 0;
+    }
 
-    unsigned char index = 0;
-    unsigned char out_index = 0;
+    // We can only return small values
+    constexpr uint8_t InvalidByte { 255u };
 
     auto char2byte = [](char ch) -> uint8_t {
         if ((ch >= '0') && (ch <= '9')) {
@@ -825,17 +836,24 @@ size_t hexDecode(const char* in, size_t in_size, uint8_t* out, uint8_t out_size)
         } else if ((ch >= 'A') && (ch <= 'F')) {
             return 10 + (ch - 'A');
         } else {
-            return 0;
+            return InvalidByte;
         }
     };
 
-    while (index < in_size) {
-        out[out_index] = char2byte(in[index]) << 4;
-        out[out_index] += char2byte(in[index + 1]);
+    size_t index = 0;
+    size_t out_index = 0;
 
-        index += 2;
-        out_index += 1;
+    while (index < in_size) {
+        const uint8_t lhs = char2byte(in[index]) << 4;
+        const uint8_t rhs = char2byte(in[index + 1]);
+        if ((InvalidByte != lhs) && (InvalidByte != rhs)) {
+            out[out_index++] = lhs | rhs;
+            index += 2;
+            continue;
+        }
+        out_index = 0;
+        break;
     }
 
-    return out_index ? (1 + out_index) : 0;
+    return out_index;
 }

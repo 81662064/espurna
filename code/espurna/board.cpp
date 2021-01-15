@@ -21,11 +21,7 @@ PROGMEM const char espurna_modules[] =
         "BROKER "
     #endif
     #if BUTTON_SUPPORT
-    #if BUTTON_EVENTS_SOURCE == BUTTON_EVENTS_SOURCE_GENERIC
         "BUTTON "
-    #else
-        "BUTTON_DUAL "
-    #endif
     #endif
     #if DEBUG_SERIAL_SUPPORT
         "DEBUG_SERIAL "
@@ -81,11 +77,17 @@ PROGMEM const char espurna_modules[] =
     #if NTP_SUPPORT
         "NTP "
     #endif
+    #if PROMETHEUS_SUPPORT
+        "METRICS "
+    #endif
+    #if RELAY_SUPPORT
+        "RELAY "
+    #endif
     #if RFM69_SUPPORT
         "RFM69 "
     #endif
-    #if RF_SUPPORT
-        "RF "
+    #if RFB_SUPPORT
+        "RFB "
     #endif
     #if RPN_RULES_SUPPORT
         "RPN_RULES "
@@ -111,6 +113,9 @@ PROGMEM const char espurna_modules[] =
     #endif
     #if TERMINAL_SUPPORT
         "TERMINAL "
+    #endif
+    #if GARLAND_SUPPORT
+        "GARLAND "
     #endif
     #if THERMOSTAT_SUPPORT
         "THERMOSTAT "
@@ -174,6 +179,9 @@ PROGMEM const char espurna_webui[] =
     #if WEBUI_IMAGE == WEBUI_IMAGE_LIGHTFOX
         "LIGHTFOX"
     #endif
+    #if WEBUI_IMAGE == WEBUI_IMAGE_GARLAND
+        "GARLAND"
+    #endif
     #if WEBUI_IMAGE == WEBUI_IMAGE_THERMOSTAT
         "THERMOSTAT"
     #endif
@@ -202,6 +210,9 @@ PROGMEM const char espurna_sensors[] =
     #endif
     #if BMX280_SUPPORT
         "BMX280 "
+    #endif
+    #if BME680_SUPPORT
+        "BME680 "
     #endif
     #if CSE7766_SUPPORT
         "CSE7766 "
@@ -559,7 +570,7 @@ int getBoardId() {
         return 96;
     #elif defined(HELTEC_TOUCHRELAY)
         return 97;
-    #elif defined(ZHILDE_EU44_W)
+    #elif defined(ZHILDE_44EU_W)
         return 98;
     #elif defined(ALLNET_4DUINO_IOT_WLAN_RELAIS)
         return 99;
@@ -683,6 +694,10 @@ int getBoardId() {
         return 158;
     #elif defined(PRODINO_WIFI)
         return 159;
+    #elif defined(GOSUND_SP111)
+        return 160;
+    #elif defined(GOSUND_P1)
+        return 161;
     #else
         return -1; // CUSTOM
     #endif
