@@ -9,21 +9,13 @@ Copyright (C) 2020 by Maxim Prokhorov <prokhorov dot max at outlook dot com>
 
 #pragma once
 
-#include "espurna.h"
-
-#include "broker.h"
-
-//--------------------------------------------------------------------------------
-
 namespace sensor {
-
 namespace type {
 
-enum Type : unsigned char {
-    Base = 0,
-    Emon = 1 << 0,
-    Analog = 1 << 1
-};
+static constexpr unsigned char Base { 0 };
+static constexpr unsigned char Emon { 1 << 0 };
+static constexpr unsigned char AnalogEmon { 1 << 1 };
+static constexpr unsigned char Analog { 1 << 2 };
 
 } // namespace type
 
@@ -135,10 +127,13 @@ struct Value {
     unsigned char decimals;
 };
 
-}
+} // namespace sensor
 
-BrokerDeclare(SensorReadBroker, void(const String&, unsigned char, double, const char*));
-BrokerDeclare(SensorReportBroker, void(const String&, unsigned char, double, const char*));
+//--------------------------------------------------------------------------------
+
+using MagnitudeReadHandler = void(*)(const String&, unsigned char, double, const char*);
+void sensorOnMagnitudeRead(MagnitudeReadHandler handler);
+void sensorOnMagnitudeReport(MagnitudeReadHandler handler);
 
 String magnitudeUnits(unsigned char index);
 String magnitudeDescription(unsigned char index);
@@ -164,4 +159,3 @@ void sensorWebSocketMagnitudes(JsonObject& root, const String& prefix);
 unsigned char sensorCount();
 void sensorSetup();
 void sensorLoop();
-

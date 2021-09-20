@@ -12,10 +12,11 @@ Copyright (C) 2019-2021 by Maxim Prokhorov <prokhorov dot max at outlook dot com
 
 #if TUYA_SUPPORT
 
-#include "broker.h"
 #include "light.h"
 #include "relay.h"
 #include "rpc.h"
+
+#include "libs/OnceFlag.h"
 
 #include <functional>
 #include <queue>
@@ -121,49 +122,42 @@ namespace tuya {
             _channels(channels)
         {}
 
-        explicit TuyaLightProvider(const DpMap& channels, StateId* state) :
+        explicit TuyaLightProvider(const DpMap& channels, StateId* stateId) :
             _channels(channels),
-            _state(state)
+            _stateId(stateId)
         {}
 
         void update() override {
         }
 
-        void state(bool status) override {
-            if (_state && *_state) {
-                _state->filter(false);
-                if (!status) {
-                    send(_state->id(), status);
-                }
+        // Channel values > 0 will switch the lights ON anyway
+        void state(bool value) override {
+            _last_state = value;
+            if (*_stateId && !value) {
+                send(_stateId->id(), value);
             }
         }
 
-        void channel(unsigned char channel, double value) override {
+        void channel(size_t channel, float value) override {
+            // XXX: can't handle channel values when OFF, and will turn the lights ON
+            if (!_last_state) {
+                return;
+            }
+
             auto* entry = _channels.find_local(channel);
             if (!entry) {
                 return;
             }
 
-            // tuya dimmer is precious, and can't handle 0...some-kind-of-threshold
-            // just ignore it, the associated switch will handle turning it off
-            auto rounded = static_cast<unsigned int>(value);
-            if (rounded <= 0x10) {
-                return;
-            }
-
-            // Filtering for incoming data
-            // ref. https://github.com/xoseperez/espurna/issues/2222
-            // TODO: should be fixed when relay & channel transition states are implemented as transactions?
-            if (_state && *_state) {
-                _state->filter(true);
-            }
-
-            send(entry->dp_id, rounded);
+            // input dimmer channel value when lights are OFF is 16
+            // for the same reason as above, don't send OFF values
+            send(entry->dp_id, static_cast<unsigned int>(value));
         }
 
     private:
         const DpMap& _channels;
-        StateId* _state { nullptr };
+        bool _last_state { false };
+        StateId* _stateId { nullptr };
     };
 
 #endif
@@ -171,11 +165,11 @@ namespace tuya {
     // --------------------------------------------
 
     uint8_t getWiFiState() {
-
-        uint8_t state = wifiState();
-        if (state & WIFI_STATE_SMARTCONFIG) return 0x00;
-        if (state & WIFI_STATE_AP) return 0x01;
-        if (state & WIFI_STATE_STA) return 0x04;
+        if (wifiConnected()) {
+            return 0x04;
+        } else if (wifiConnectable()) {
+            return 0x01;
+        }
 
         return 0x02;
     }
@@ -190,8 +184,8 @@ namespace tuya {
     void updatePins(uint8_t led, uint8_t rst) {
         static bool done { false };
         if (!done) {
-            addConfig("ledGPIO0", String(led));
-            addConfig("btnGPIO0", String(rst));
+            addConfig("ledGpio0", String(led));
+            addConfig("btnGpio0", String(rst));
             done = true;
         }
     }
@@ -373,13 +367,9 @@ error:
                     setupSwitches();
                 }
 
-                if (!configDone) {
-                    DEBUG_MSG_P(PSTR("[TUYA] Starting discovery\n"));
-                    state = State::QUERY_PRODUCT;
-                    return;
-                }
-
-                state = State::IDLE;
+                DEBUG_MSG_P(PSTR("[TUYA] Starting discovery\n"));
+                state = State::QUERY_PRODUCT;
+                return;
             }
 
             sendWiFiStatus();
@@ -527,14 +517,41 @@ error:
 
     }
 
+    namespace build {
+
+    constexpr unsigned char channelDpId(size_t index) {
+        return (index == 0) ? TUYA_CH1_DPID :
+            (index == 1) ? TUYA_CH2_DPID :
+            (index == 2) ? TUYA_CH3_DPID :
+            (index == 3) ? TUYA_CH4_DPID :
+            (index == 4) ? TUYA_CH5_DPID : 0u;
+    }
+
+    constexpr unsigned char switchDpId(size_t index) {
+        return (index == 0) ? TUYA_SW1_DPID :
+            (index == 1) ? TUYA_SW2_DPID :
+            (index == 2) ? TUYA_SW3_DPID :
+            (index == 3) ? TUYA_SW4_DPID :
+            (index == 4) ? TUYA_SW5_DPID :
+            (index == 5) ? TUYA_SW6_DPID :
+            (index == 6) ? TUYA_SW7_DPID :
+            (index == 7) ? TUYA_SW8_DPID : 0u;
+    }
+
+    constexpr unsigned char channelStateDpId() {
+        return TUYA_CH_STATE_DPID;
+    }
+
+    } // namespace build
+
     // Predefined DP<->SWITCH, DP<->CHANNEL associations
     // Respective provider setup should be called before state restore,
     // so we can use dummy values
 
     void setupSwitches() {
         bool done { false };
-        for (unsigned char id = 0; id < RelaysMax; ++id) {
-            auto dp = getSetting({"tuyaSwitch", id}, 0);
+        for (size_t id = 0; id < RelaysMax; ++id) {
+            auto dp = getSetting({"tuyaSwitch", id}, build::switchDpId(id));
             if (!dp) {
                 break;
             }
@@ -559,8 +576,8 @@ error:
 
     void setupChannels() {
         bool done { false };
-        for (unsigned char id = 0; id < Light::ChannelsMax; ++id) {
-            auto dp = getSetting({"tuyaChannel", id}, 0);
+        for (size_t id = 0; id < Light::ChannelsMax; ++id) {
+            auto dp = getSetting({"tuyaChannel", id}, build::channelDpId(id));
             if (!dp) {
                 break;
             }
@@ -577,7 +594,7 @@ error:
         }
 
         if (done) {
-            channelStateId = getSetting("tuyaChanState", 0u);
+            channelStateId = getSetting("tuyaChanState", build::channelStateDpId());
             lightSetProvider(std::make_unique<TuyaLightProvider>(channelIds, &channelStateId));
         }
 
@@ -596,12 +613,13 @@ error:
 
             terminalRegisterCommand(F("TUYA.SHOW"), [](const terminal::CommandContext& ctx) {
                 ctx.output.printf_P(PSTR("Product: %s\n"), product.length() ? product.c_str() : "(unknown)");
-                ctx.output.println(F("\nConfig:"));
+
+                ctx.output.print(F("\nConfig:\n"));
                 for (auto& kv : config) {
                     ctx.output.printf_P(PSTR("\"%s\" => \"%s\"\n"), kv.key.c_str(), kv.value.c_str());
                 }
 
-                ctx.output.println(F("\nKnown DP(s):"));
+                ctx.output.print(F("\nKnown DP(s):\n"));
 #if LIGHT_PROVIDER == LIGHT_PROVIDER_CUSTOM
                 if (channelStateId) {
                     ctx.output.printf_P(PSTR("%u (bool) => lights state\n"), channelStateId.id());
@@ -633,8 +651,8 @@ error:
         TUYA_SERIAL.begin(SerialSpeed);
 
         ::espurnaRegisterLoop(loop);
-        ::wifiRegister([](justwifi_messages_t code, char * parameter) {
-            if ((MESSAGE_CONNECTED == code) || (MESSAGE_DISCONNECTED == code)) {
+        ::wifiRegister([](wifi::Event event) {
+            if ((event == wifi::Event::StationConnected) || (event == wifi::Event::StationDisconnected)) {
                 sendWiFiStatus();
             }
         });

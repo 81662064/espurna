@@ -1,11 +1,19 @@
+/*
+
+MDNS MODULE
+
+Copyright (C) 2017-2019 by Xose Pérez <xose dot perez at gmail dot com>
+
+*/
+
 #pragma once
 
-#include "espurna.h"
 #include <Arduino.h>
 
-#if MDNS_SERVER_SUPPORT
+#include <cstdint>
 
-#include <ESP8266mDNS.h>
+using MdnsServerQueryCallback = bool(*)(String&& server, uint16_t port);
+bool mdnsServiceQuery(const String& service, const String& protocol, MdnsServerQueryCallback callback);
+
+bool mdnsRunning();
 void mdnsServerSetup();
-
-#endif

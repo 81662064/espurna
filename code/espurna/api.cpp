@@ -1,8 +1,9 @@
 /*
 
-API MODULE
+API & WEB API MODULE
 
 Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
+Copyright (C) 2020-2021 by Maxim Prokhorov <prokhorov dot max at outlook dot com>
 
 */
 
@@ -10,16 +11,17 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 
 // -----------------------------------------------------------------------------
 
-#if API_SUPPORT
-
 #include "system.h"
-#include "web.h"
 #include "rpc.h"
 
+#if WEB_SUPPORT
+#include "web.h"
 #include <ESPAsyncTCP.h>
 #include <ArduinoJson.h>
+#endif
 
 #include <algorithm>
+#include <memory>
 #include <cstring>
 #include <forward_list>
 #include <vector>
@@ -126,11 +128,10 @@ bool PathParts::match(const PathParts& path) const {
     }
 
     auto lhs = begin();
-    auto rhs = path.begin();
-
     auto lhs_end = end();
-    auto rhs_end = path.end();
 
+    auto rhs = path.begin();
+    auto rhs_end = path.end();
 loop:
     if (lhs == lhs_end) {
         goto check_end;
@@ -141,7 +142,6 @@ loop:
         if (
             (rhs != rhs_end)
             && ((*rhs).type == PathPart::Type::Value)
-            && ((*rhs).offset == (*lhs).offset)
             && ((*rhs).length == (*lhs).length)
         ) {
             if (0 == std::memcmp(
@@ -193,6 +193,8 @@ error:
     return false;
 }
 
+#if WEB_SUPPORT
+
 String ApiRequest::wildcard(int index) const {
     if (index < 0) {
         index = std::abs(index + 1);
@@ -230,7 +232,13 @@ size_t ApiRequest::wildcards() const {
     return result;
 }
 
+#endif
+
 // -----------------------------------------------------------------------------
+
+#if API_SUPPORT
+
+namespace {
 
 bool _apiAccepts(AsyncWebServerRequest* request, const __FlashStringHelper* str) {
     auto* header = request->getHeader(F("Accept"));
@@ -656,10 +664,6 @@ private:
     ApiBasicHandler _put;
 };
 
-// -----------------------------------------------------------------------------
-
-namespace {
-
 std::forward_list<ApiBaseWebHandler*> _apis;
 
 template <typename Handler, typename Callback>
@@ -671,6 +675,8 @@ void _apiRegister(const String& path, Callback&& get, Callback&& put) {
 }
 
 } // namespace
+
+// -----------------------------------------------------------------------------
 
 void apiRegister(const String& path, ApiBasicHandler&& get, ApiBasicHandler&& put) {
     _apiRegister<ApiBasicWebHandler>(path, std::move(get), std::move(put));
@@ -716,4 +722,3 @@ bool apiError(ApiRequest& request) {
 }
 
 #endif // API_SUPPORT
-

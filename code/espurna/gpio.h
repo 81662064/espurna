@@ -8,8 +8,10 @@ Copyright (C) 2017-2019 by Xose Pérez <xose dot perez at gmail dot com>
 
 #pragma once
 
-#include "espurna.h"
+#include "settings.h"
 #include "libs/BasePin.h"
+
+#include <cstddef>
 
 enum class GpioType : int {
     None,

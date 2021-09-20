@@ -7,16 +7,13 @@ Inspired by https://github.com/Vasil-Pahomov/ArWs2812 (currently https://github.
 
 #pragma once
 
-#if GARLAND_SUPPORT
-
-#include <array>
-#include <vector>
-
 #include "anim.h"
 #include "animations/anim_assemble.h"
 #include "animations/anim_comets.h"
 #include "animations/anim_dolphins.h"
+#include "animations/anim_fountain.h"
 #include "animations/anim_fly.h"
+#include "animations/anim_glow.h"
 #include "animations/anim_pixiedust.h"
 #include "animations/anim_randcyc.h"
 #include "animations/anim_run.h"
@@ -25,43 +22,42 @@ Inspired by https://github.com/Vasil-Pahomov/ArWs2812 (currently https://github.
 #include "animations/anim_spread.h"
 #include "animations/anim_stars.h"
 #include "animations/anim_start.h"
+#include "animations/anim_waves.h"
 
-class Adafruit_NeoPixel;
-class Palette;
-
+template <uint16_t Leds>
 class Scene {
 public:
-    Scene(Adafruit_NeoPixel* pixels);
+    Scene(Adafruit_NeoPixel* pixels) : _pixels(pixels) {}
+    constexpr uint16_t getLeds() const { return Leds; }
 
+    void setAnim(Anim* anim) { _anim = anim; }
+    bool finishedAnimCycle() { return _anim ? _anim->finishedycle() : true; }
+    unsigned long getAvgCalcTime() { return sum_calc_time / calc_num; }
+    unsigned long getAvgPixlTime() { return sum_pixl_time / pixl_num; }
+    unsigned long getAvgShowTime() { return sum_show_time / show_num; }
+    int getNumShows() { return numShows; }
+    byte getBrightness() { return brightness; }
+    void setBrightness(byte value) { brightness = value; }
+    byte getSpeed() { return speed; }
 
     void setPalette(Palette* palette);
-    void setBrightness(byte brightness);
-    byte getBrightness();
     void setSpeed(byte speed);
-    byte getSpeed();
     void setDefault();
-    void setAnim(Anim* anim) { _anim = anim; }
     void run();
     void setup();
-    bool finishedAnimCycle() { return _anim ? _anim->finishedycle() : true; }
-    unsigned long getAvgCalcTime();
-    unsigned long getAvgPixlTime();
-    unsigned long getAvgShowTime();
-    int getNumShows() { return numShows; }
 
 private:
     Adafruit_NeoPixel* _pixels = nullptr;
-    uint16_t           _numLeds;
     //Color arrays - two for making transition
-    std::vector<Color> _leds1;
-    std::vector<Color> _leds2;
+    std::array<Color, Leds> _leds1;
+    std::array<Color, Leds> _leds2;
     // array of Colorfor anim to currently work with
     Color*             _leds = nullptr;
     Anim*              _anim = nullptr;
 
     //auxiliary colors array for mutual usage of anims
-    std::vector<Color> _ledstmp;
-    std::vector<byte>  _seq;
+    std::array<Color, Leds> _ledstmp;
+    std::array<byte, Leds>  _seq;
 
     Palette*           _palette = nullptr;
 
@@ -70,10 +66,17 @@ private:
 
     byte               brightness = 0;
 
-    // Reverse to speed. If more convenient to calculate in this way.
-    // 1 < cycleFactor < 4
-    byte               speed = 50;
+    // cycleFactor is actually number of cycles to calculate and draw one animation step
+    // if cycleFactor is 2 or more, than calculation and drawing made in different cycles
+    // cycleFactor is float. For example cycleFactor=2.5 gives one step 2 than next 3 cycles per anim step
+    // Recommended values: 1 < cycleFactor < 4
     float              cycleFactor = 2.0;
+    // speed is reverse to cycleFactor. For forward direction control of animation speed.
+    // Recommended values: 30 < speed < 60.
+    // Correspondence: 
+    //   speed=60, cycleFactor=1
+    //   speed=30, cycleFactor=4
+    byte               speed = 50;
     float              cycleTail = 0;
     int                cyclesRemain = 0;
 
@@ -109,5 +112,3 @@ private:
 
     void setupImpl();
 };
-
-#endif  // GARLAND_SUPPORT

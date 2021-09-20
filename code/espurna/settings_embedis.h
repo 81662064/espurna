@@ -17,19 +17,11 @@ Reimplementation of the Embedis storage format:
 #include <memory>
 #include <vector>
 
+#include "settings_helpers.h"
 #include "libs/TypeChecks.h"
 
 namespace settings {
 namespace embedis {
-
-// 'optional' type for byte range
-struct ValueResult {
-    operator bool() {
-        return result;
-    }
-    bool result { false };
-    String value;
-};
 
 // Sum total is calculated from:
 // - 4 bytes to store length of 2 values (stored as big-endian)
@@ -260,7 +252,7 @@ class KeyValueStore {
 
     // Internal storage consists of sequences of <byte-range><length>
     struct KeyValueResult {
-        operator bool() {
+        explicit operator bool() {
             return (key) && (value) && (key.length > 0);
         }
 
@@ -315,18 +307,6 @@ class KeyValueStore {
             }
             callback(std::move(kv));
         } while (_state != State::End);
-    }
-
-    // read every key into a vector
-    std::vector<String> keys() {
-        std::vector<String> out;
-        out.reserve(count());
-
-        foreach([&](KeyValueResult&& kv) {
-            out.push_back(kv.key.read());
-        });
-
-        return out;
     }
 
     // set or update key with value contents. ensure 'key' isn't empty, 'value' can be empty
@@ -497,10 +477,9 @@ class KeyValueStore {
 
             auto key_result = kv.key.read();
             if (key_result == key) {
-                if (read_value) {
-                    out.value = kv.value.read();
-                }
-                out.result = true;
+                out = read_value
+                    ? std::move(kv.value.read())
+                    : String();
                 break;
             }
         } while (_state != State::End);

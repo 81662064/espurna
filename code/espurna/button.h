@@ -8,13 +8,12 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 
 #pragma once
 
-#include "espurna.h"
-
-#include "broker.h"
+#include <Arduino.h>
 
 #include "libs/BasePin.h"
 #include "libs/DebounceEvent.h"
 
+#include <cstdint>
 #include <memory>
 
 constexpr size_t ButtonsActionMax { 255ul };
@@ -22,15 +21,13 @@ constexpr size_t ButtonsActionMax { 255ul };
 constexpr size_t ButtonsPresetMax { 8ul };
 constexpr size_t ButtonsMax { 32ul };
 
-using ButtonCustomAction = void(*)(unsigned char id);
-
 enum class ButtonProvider : int {
     None,
     Gpio,
     Analog
 };
 
-enum class button_event_t {
+enum class ButtonEvent {
     None,
     Pressed,
     Released,
@@ -57,7 +54,10 @@ enum class ButtonAction : uint8_t  {
     BrightnessIncrease,
     BrightnessDecrease,
     DisplayOn,
-    Custom
+    Custom,
+    FanLow,
+    FanMedium,
+    FanHigh
 };
 
 struct ButtonActions {
@@ -70,9 +70,9 @@ struct ButtonActions {
     ButtonAction trplclick;
 };
 
-struct button_event_delays_t {
-    button_event_delays_t();
-    button_event_delays_t(unsigned long debounce, unsigned long repeat, unsigned long lngclick, unsigned long lnglngclick);
+struct ButtonEventDelays {
+    ButtonEventDelays();
+    ButtonEventDelays(unsigned long debounce, unsigned long repeat, unsigned long lngclick, unsigned long lnglngclick);
 
     unsigned long debounce;
     unsigned long repeat;
@@ -80,28 +80,30 @@ struct button_event_delays_t {
     unsigned long lnglngclick;
 };
 
-struct button_t {
-    button_t(ButtonActions&& actions, button_event_delays_t&& delays);
-    button_t(BasePinPtr&& pin, const debounce_event::types::Config& config,
-        ButtonActions&& actions, button_event_delays_t&& delays);
+using ButtonEventEmitterPtr = std::unique_ptr<debounce_event::EventEmitter>;
+
+struct Button {
+    Button(ButtonActions&& actions, ButtonEventDelays&& delays);
+    Button(BasePinPtr&& pin, const debounce_event::types::Config& config,
+        ButtonActions&& actions, ButtonEventDelays&& delays);
 
     bool state();
-    button_event_t loop();
+    ButtonEvent loop();
 
-    std::unique_ptr<debounce_event::EventEmitter> event_emitter;
+    ButtonEventEmitterPtr event_emitter;
 
     ButtonActions actions;
-    button_event_delays_t event_delays;
+    ButtonEventDelays event_delays;
 };
 
-BrokerDeclare(ButtonBroker, void(unsigned char id, button_event_t event));
+using ButtonEventHandler = void(*)(size_t id, ButtonEvent event);
+void buttonSetCustomAction(ButtonEventHandler);
 
-void buttonSetCustomAction(ButtonCustomAction);
+ButtonAction buttonAction(size_t id, const ButtonEvent event);
+void buttonEvent(size_t id, ButtonEvent event);
+void buttonOnEvent(ButtonEventHandler);
 
-bool buttonState(unsigned char id);
-ButtonAction buttonAction(unsigned char id, const button_event_t event);
+bool buttonAdd();
 
-void buttonEvent(unsigned char id, button_event_t event);
-
-unsigned char buttonCount();
+size_t buttonCount();
 void buttonSetup();

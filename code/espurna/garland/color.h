@@ -7,25 +7,30 @@ Inspired by https://github.com/Vasil-Pahomov/ArWs2812 (currently https://github.
 
 #pragma once
 
-#if GARLAND_SUPPORT
+class Color {
+public:
+    byte r = 0;
+    byte g = 0;
+    byte b = 0;
 
-#include <Arduino.h>
+    Color() = default;
+    Color(const Color&) = default;
+    Color(Color&&) = default;
 
-struct Color
-{
-    byte r;
-    byte g;
-    byte b;
+    Color& operator=(const Color&) = default;
+    Color& operator=(Color&&) = default;
 
-    inline Color() : r(0), g(0), b(0) {}
+    bool operator==(const Color& other) const {
+        return (r == other.r) && (g == other.g) && (b == other.b);
+    }
 
     // allow construction from R, G, B
-    inline Color(uint8_t ir, uint8_t ig, uint8_t ib)
+    Color(uint8_t ir, uint8_t ig, uint8_t ib)
         : r(ir), g(ig), b(ib) {
     }
 
     // allow construction from 32-bit (really 24-bit) bit 0xRRGGBB color code
-    inline Color(uint32_t colorcode)
+    Color(uint32_t colorcode)
         : r((colorcode >> 16) & 0xFF), g((colorcode >> 8) & 0xFF), b((colorcode >> 0) & 0xFF) {
     }
 
@@ -47,18 +52,34 @@ struct Color
     }
 
     //fades (decreases all RGB channels brightness) this color by k
-    void fade(byte k) {
+    Color& fade(byte k) {
         if (r>=k) { r=r-k; } else { r=0; }
         if (g>=k) { g=g-k; } else { g=0; }
         if (b>=k) { b=b-k; } else { b=0; }
+        return *this;
     }
 
     //fades color separately for each channel
-    void fade3(byte dr, byte dg, byte db) {
+    Color& fade3(byte dr, byte dg, byte db) {
         if (r>=dr) { r=r-dr; } else { r=0; }
         if (g>=dg) { g=g-dg; } else { g=0; }
         if (b>=db) { b=b-db; } else { b=0; }
+        return *this;
     }  
+
+    Color max_bright() {
+        if (r==255 || g==255 || b==255)
+            return Color(r, g, b);
+        double kr = 255.0/r;
+        double kg = 255.0/g;
+        double kb = 255.0/b;
+        double k1 = kr < kg ? kr : kg;
+        double k2 = k1 < kb ? k1 : kb;
+        int r0 = r * k2;
+        int g0 = g * k2;
+        int b0 = b * k2;
+        return Color(r0, g0, b0);
+    }
 
     //checks whether this color is visually close to given one
     bool isCloseTo(Color c) const {
@@ -81,7 +102,9 @@ struct Color
         Serial.print(("b="));Serial.println(b);
     }
 
-    friend bool operator== (const Color &c1, const Color &c2);
+    String to_str() {
+        char buf[20];
+        sprintf(buf, "r=%hhu, g=%hhu, b=%hhu", r, g, b);
+        return buf;
+    }
 };
-
-#endif // GARLAND_SUPPORT

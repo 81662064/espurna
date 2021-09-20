@@ -15,6 +15,7 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 #include <memory>
 
 #include "system.h"
+#include "settings.h"
 #include "utils.h"
 #include "ntp.h"
 
@@ -28,6 +29,8 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 #include <AsyncJson.h>
 
 #if WEB_EMBEDDED
+
+namespace {
 
 #if WEBUI_IMAGE == WEBUI_IMAGE_SMALL
     #include "static/index.small.html.gz.h"
@@ -51,13 +54,14 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
     #include "static/index.all.html.gz.h"
 #endif
 
+} // namespace
+
 #endif // WEB_EMBEDDED
 
 #if WEB_SSL_ENABLED
 #include "static/server.cer.h"
 #include "static/server.key.h"
 #endif // WEB_SSL_ENABLED
-
 
 AsyncWebPrint::AsyncWebPrint(const AsyncWebPrintConfig& config, AsyncWebServerRequest* request) :
     mimeType(config.mimeType),
@@ -205,6 +209,8 @@ size_t AsyncWebPrint::write(const uint8_t* data, size_t size) {
 
 // -----------------------------------------------------------------------------
 
+namespace {
+
 AsyncWebServer* _server;
 char _last_modified[50];
 std::vector<uint8_t> * _webConfigBuffer;
@@ -213,20 +219,28 @@ bool _webConfigSuccess = false;
 std::vector<web_request_callback_f> _web_request_callbacks;
 std::vector<web_body_callback_f> _web_body_callbacks;
 
-constexpr const size_t WEB_CONFIG_BUFFER_MAX = 4096;
+constexpr unsigned long WebConfigBufferMax { 4096ul };
+
+} // namespace
 
 // -----------------------------------------------------------------------------
 // HOOKS
 // -----------------------------------------------------------------------------
 
-void _onReset(AsyncWebServerRequest *request) {
+namespace {
 
+void _webRequestAuth(AsyncWebServerRequest* request) {
+    request->requestAuthentication(getSetting("hostname", getIdentifier()).c_str(), true);
+}
+
+void _onReset(AsyncWebServerRequest *request) {
     webLog(request);
     if (!webAuthenticate(request)) {
-        return request->requestAuthentication(getSetting("hostname").c_str());
+        _webRequestAuth(request);
+        return;
     }
 
-    deferredReset(100, CUSTOM_RESET_HTTP);
+    deferredReset(100, CustomResetReason::Web);
     request->send(200);
 }
 
@@ -239,9 +253,9 @@ void _onDiscover(AsyncWebServerRequest *request) {
 
     StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
-    root["app"] = APP_NAME;
-    root["version"] = getVersion().c_str();
-    root["device"] = device.c_str();
+    root["app"] = getAppName();
+    root["version"] = getVersion();
+    root["device"] = device;
     root["hostname"] = hostname.c_str();
 
     AsyncResponseStream *response = request->beginResponseStream("application/json", root.measureLength() + 1);
@@ -252,44 +266,80 @@ void _onDiscover(AsyncWebServerRequest *request) {
 }
 
 void _onGetConfig(AsyncWebServerRequest *request) {
-
-    webLog(request);
     if (!webAuthenticate(request)) {
-        return request->requestAuthentication(getSetting("hostname").c_str());
+        _webRequestAuth(request);
+        return;
     }
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    auto out = std::make_shared<String>();
+    out->reserve(TCP_MSS);
 
-    char buffer[100];
-    snprintf_P(buffer, sizeof(buffer), PSTR("attachment; filename=\"%s-backup.json\""), (char *) getSetting("hostname").c_str());
-    response->addHeader("Content-Disposition", buffer);
-    response->addHeader("X-XSS-Protection", "1; mode=block");
-    response->addHeader("X-Content-Type-Options", "nosniff");
-    response->addHeader("X-Frame-Options", "deny");
 
-    response->printf("{\n\"app\": \"" APP_NAME "\"");
-    response->printf(",\n\"version\": \"%s\"", getVersion().c_str());
-    response->printf(",\n\"backup\": \"1\"");
-    #if NTP_SUPPORT
-        response->printf(",\n\"timestamp\": \"%s\"", ntpDateTime().c_str());
-    #endif
-
-    // Write the keys line by line (not sorted)
-    auto keys = settingsKeys();
-    for (auto& key : keys) {
-        String value = getSetting(key);
-        response->printf(",\n\"%s\": \"%s\"", key.c_str(), value.c_str());
+    char buffer[256];
+    int prefix_len = snprintf_P(buffer, sizeof(buffer),
+            PSTR("{\n\"app\": \"%s\",\n\"version\": \"%s\",\n\"backup\": \"1\""),
+            getAppName(), getVersion());
+    if (prefix_len <= 0) {
+        request->send(500);
+        return;
     }
-    response->printf("\n}");
+    out->concat(buffer, prefix_len);
 
-    request->send(response);
+    settings::internal::foreach([&](settings::kvs_type::KeyValueResult&& kv) {
+        auto key = kv.key.read();
+        auto value = kv.value.read();
 
+        int len = snprintf_P(buffer, sizeof(buffer), PSTR("\"%s\": \"%s\""), key.c_str(), value.c_str());
+        if (len > 0) {
+            *out += ",\n";
+            out->concat(buffer, len);
+        }
+    });
+    *out += "\n}";
+
+    auto hostname = getSetting("hostname", getIdentifier());
+    auto timestamp = String(millis());
+#if NTP_SUPPORT
+    if (ntpSynced()) {
+        timestamp = ntpDateTime();
+    }
+#endif
+
+    AsyncWebServerResponse* response = request->beginChunkedResponse("application/json",
+        [out](uint8_t* buffer, size_t maxLen, size_t index) -> size_t {
+            auto len = out->length();
+            if (index == len) {
+                return 0;
+            }
+
+            auto* ptr = out->c_str() + index;
+            size_t have = std::min(len - index, maxLen);
+            if (have) {
+                std::copy(ptr, ptr + have, buffer);
+            }
+
+            return have;
+        });
+
+    int written = snprintf_P(buffer, sizeof(buffer),
+        PSTR("attachment; filename=\"%s %s backup.json\""), hostname.c_str(), timestamp.c_str());
+    if (written > 0) {
+        response->addHeader("Content-Disposition", buffer);
+        response->addHeader("X-XSS-Protection", "1; mode=block");
+        response->addHeader("X-Content-Type-Options", "nosniff");
+        response->addHeader("X-Frame-Options", "deny");
+        request->send(response);
+        return;
+    }
+
+    request->send(500);
 }
 
 void _onPostConfig(AsyncWebServerRequest *request) {
     webLog(request);
     if (!webAuthenticate(request)) {
-        return request->requestAuthentication(getSetting("hostname").c_str());
+        _webRequestAuth(request);
+        return;
     }
     request->send(_webConfigSuccess ? 200 : 400);
 }
@@ -297,7 +347,8 @@ void _onPostConfig(AsyncWebServerRequest *request) {
 void _onPostConfigFile(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
 
     if (!webAuthenticate(request)) {
-        return request->requestAuthentication(getSetting("hostname").c_str());
+        _webRequestAuth(request);
+        return;
     }
 
     // No buffer
@@ -317,7 +368,7 @@ void _onPostConfigFile(AsyncWebServerRequest *request, String filename, size_t i
 
     // Copy
     if (len > 0) {
-        if ((_webConfigBuffer->size() + len) > std::min(WEB_CONFIG_BUFFER_MAX, getFreeHeap() - sizeof(std::vector<uint8_t>))) {
+        if ((_webConfigBuffer->size() + len) > std::min(WebConfigBufferMax, systemFreeHeap() - sizeof(std::vector<uint8_t>))) {
             delete _webConfigBuffer;
             _webConfigBuffer = nullptr;
             request->send(500);
@@ -343,7 +394,8 @@ void _onHome(AsyncWebServerRequest *request) {
 
     webLog(request);
     if (!webAuthenticate(request)) {
-        return request->requestAuthentication(getSetting("hostname").c_str());
+        _webRequestAuth(request);
+        return;
     }
 
     if (request->header("If-Modified-Since").equals(_last_modified)) {
@@ -356,8 +408,8 @@ void _onHome(AsyncWebServerRequest *request) {
 
             // Chunked response, we calculate the chunks based on free heap (in multiples of 32)
             // This is necessary when a TLS connection is open since it sucks too much memory
-            DEBUG_MSG_P(PSTR("[MAIN] Free heap: %d bytes\n"), getFreeHeap());
-            size_t max = (getFreeHeap() / 3) & 0xFFE0;
+            DEBUG_MSG_P(PSTR("[MAIN] Free heap: %d bytes\n"), systemFreeHeap());
+            size_t max = (systemFreeHeap() / 3) & 0xFFE0;
 
             AsyncWebServerResponse *response = request->beginChunkedResponse("text/html", [max](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
 
@@ -503,6 +555,7 @@ void _onBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t i
 
 }
 
+} // namespace
 
 // -----------------------------------------------------------------------------
 

@@ -23,6 +23,8 @@ Updated to use WiFiServer and support reverse connections by Niek van der Maas <
 #include <vector>
 
 #include "board.h"
+#include "crash.h"
+#include "terminal.h"
 #include "ws.h"
 
 #if TELNET_SERVER == TELNET_SERVER_ASYNC
@@ -93,6 +95,10 @@ bool _telnetClientsAuth[TELNET_MAX_CLIENTS];
 
 #if WEB_SUPPORT
 
+void _telnetWebSocketOnVisible(JsonObject& root) {
+    wsPayloadModule(root, "telnet");
+}
+
 bool _telnetWebSocketOnKeyCheck(const char * key, JsonVariant& value) {
     return (strncmp(key, "telnet", 6) == 0);
 }
@@ -137,11 +143,11 @@ void _telnetReverse(const char * host, uint16_t port) {
 
 #if MQTT_SUPPORT
 
-void _telnetReverseMQTTCallback(unsigned int type, const char * topic, const char * payload) {
+void _telnetReverseMQTTCallback(unsigned int type, const char* topic, char* payload) {
     if (type == MQTT_CONNECT_EVENT) {
         mqttSubscribe(MQTT_TOPIC_TELNET_REVERSE);
     } else if (type == MQTT_MESSAGE_EVENT) {
-        String t = mqttMagnitude((char *) topic);
+        String t = mqttMagnitude(topic);
 
         if (t.equals(MQTT_TOPIC_TELNET_REVERSE)) {
             String pl = String(payload);
@@ -169,8 +175,8 @@ static std::vector<char> _telnet_data_buffer;
 void _telnetDisconnect(unsigned char clientId) {
     _telnetClients[clientId]->stop();
     _telnetClients[clientId] = nullptr;
-    wifiReconnectCheck();
     DEBUG_MSG_P(PSTR("[TELNET] Client #%d disconnected\n"), clientId);
+    wifiApCheck();
 }
 
 #elif TELNET_SERVER == TELNET_SERVER_ASYNC
@@ -180,8 +186,8 @@ void _telnetCleanUp() {
         for (unsigned char clientId=0; clientId < TELNET_MAX_CLIENTS; ++clientId) {
             if (!_telnetClients[clientId]->connected()) {
                 _telnetClients[clientId] = nullptr;
-                wifiReconnectCheck();
                 DEBUG_MSG_P(PSTR("[TELNET] Client #%d disconnected\n"), clientId);
+                wifiApCheck();
             }
         }
     });
@@ -352,22 +358,13 @@ void _telnetData(unsigned char clientId, char * data, size_t len) {
 
     // Inject command
     #if TERMINAL_SUPPORT
-        terminalInject((void*)data, len);
+        terminalInject(reinterpret_cast<const char*>(data), len);
     #endif
 }
 
 void _telnetNotifyConnected(unsigned char i) {
 
     DEBUG_MSG_P(PSTR("[TELNET] Client #%u connected\n"), i);
-
-    // If there is no terminal support automatically dump info and crash data
-    #if DEBUG_SUPPORT
-    #if not TERMINAL_SUPPORT
-        wifiDebug();
-        crashDump(terminalDefaultStream());
-        crashClear();
-    #endif
-    #endif
 
     if (!isEspurnaCore()) {
         _telnetClientsAuth[i] = !_telnetAuth;
@@ -382,7 +379,9 @@ void _telnetNotifyConnected(unsigned char i) {
         _telnetClientsAuth[i] = true;
     }
 
-    wifiReconnectCheck();
+#if DEBUG_SUPPORT
+    crashResetReason(terminalDefaultStream());
+#endif
 
 }
 
@@ -500,6 +499,10 @@ void _telnetNewClient(AsyncClient* client) {
 // Public API
 // -----------------------------------------------------------------------------
 
+uint16_t telnetPort() {
+    return TELNET_PORT;
+}
+
 bool telnetConnected() {
     for (auto& client : _telnetClients) {
         if (client && client->connected()) return true;
@@ -545,7 +548,7 @@ void telnetSetup() {
 
     #if WEB_SUPPORT
         wsRegister()
-            .onVisible([](JsonObject& root) { root["telnetVisible"] = 1; })
+            .onVisible(_telnetWebSocketOnVisible)
             .onConnected(_telnetWebSocketOnConnected)
             .onKeyCheck(_telnetWebSocketOnKeyCheck);
     #endif
