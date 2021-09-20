@@ -17,10 +17,13 @@ char _uartmqttBuffer[UART_MQTT_BUFFER_SIZE];
 bool _uartmqttNewData = false;
 
 #if UART_MQTT_USE_SOFT
-    SoftwareSerial _uart_mqtt_serial(UART_MQTT_RX_PIN, UART_MQTT_TX_PIN, false, UART_MQTT_BUFFER_SIZE);
-    #define UART_MQTT_PORT  _uart_mqtt_serial
+#include <SoftwareSerial.h>
+
+SoftwareSerial _uart_mqtt_serial(UART_MQTT_RX_PIN, UART_MQTT_TX_PIN, false, UART_MQTT_BUFFER_SIZE);
+#define UART_MQTT_PORT  _uart_mqtt_serial
 #else
-    #define UART_MQTT_PORT  UART_MQTT_HW_PORT
+#define UART_MQTT_PORT  UART_MQTT_HW_PORT
+
 #endif
 
 // -----------------------------------------------------------------------------
@@ -65,7 +68,7 @@ void _uartmqttSendUART(const char * message) {
     UART_MQTT_PORT.println(message);
 }
 
-void _uartmqttMQTTCallback(unsigned int type, const char * topic, const char * payload) {
+void _uartmqttMQTTCallback(unsigned int type, const char* topic, char* payload) {
 
     if (type == MQTT_CONNECT_EVENT) {
         mqttSubscribe(MQTT_TOPIC_UARTOUT);
@@ -74,7 +77,7 @@ void _uartmqttMQTTCallback(unsigned int type, const char * topic, const char * p
     if (type == MQTT_MESSAGE_EVENT) {
 
         // Match topic
-        String t = mqttMagnitude((char *) topic);
+        String t = mqttMagnitude(topic);
         if (t.equals(MQTT_TOPIC_UARTOUT)) {
             _uartmqttSendUART(payload);
         }

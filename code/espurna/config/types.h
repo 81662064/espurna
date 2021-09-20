@@ -6,20 +6,8 @@
 #pragma once
 
 // -----------------------------------------------------------------------------
-// WIFI
-// -----------------------------------------------------------------------------
-
-#define WIFI_STATE_AP               1
-#define WIFI_STATE_STA              2
-#define WIFI_STATE_AP_STA           3
-#define WIFI_STATE_WPS              4
-#define WIFI_STATE_SMARTCONFIG      8
-
-// -----------------------------------------------------------------------------
 // GPIO
 // -----------------------------------------------------------------------------
-
-#define GPIO_NONE           0x99
 
 #define GPIO_TYPE_NONE          GpioType::None
 #define GPIO_TYPE_HARDWARE      GpioType::Hardware
@@ -43,6 +31,9 @@
 #define BUTTON_ACTION_DIM_DOWN        ButtonAction::BrightnessDecrease
 #define BUTTON_ACTION_DISPLAY_ON      ButtonAction::DisplayOn
 #define BUTTON_ACTION_CUSTOM          ButtonAction::Custom
+#define BUTTON_ACTION_FAN_LOW         ButtonAction::FanLow
+#define BUTTON_ACTION_FAN_MEDIUM      ButtonAction::FanMedium
+#define BUTTON_ACTION_FAN_HIGH        ButtonAction::FanHigh
 
 #define BUTTON_ACTION_MAX             ButtonsActionMax
 
@@ -106,9 +97,9 @@
 #define RELAY_SYNC_SAME             3
 #define RELAY_SYNC_FIRST            4
 
-#define RELAY_PULSE_NONE            0
-#define RELAY_PULSE_OFF             1
-#define RELAY_PULSE_ON              2
+#define RELAY_PULSE_NONE            RelayPulse::None
+#define RELAY_PULSE_OFF             RelayPulse::Off
+#define RELAY_PULSE_ON              RelayPulse::On
 
 #define RELAY_PROVIDER_NONE         RelayProvider::None
 #define RELAY_PROVIDER_DUMMY        RelayProvider::Dummy
@@ -119,13 +110,19 @@
 #define RFB_PROVIDER_RCSWITCH       0
 #define RFB_PROVIDER_EFM8BB1        1
 
-#define RELAY_GROUP_SYNC_NORMAL      0
-#define RELAY_GROUP_SYNC_INVERSE     1
-#define RELAY_GROUP_SYNC_RECEIVEONLY 2
+#define RELAY_MQTT_TOPIC_NORMAL       RelayMqttTopicMode::Normal
+#define RELAY_MQTT_TOPIC_INVERSE      RelayMqttTopicMode::Inverse
+#define RELAY_MQTT_TOPIC_RECEIVE_ONLY RelayMqttTopicMode::ReceiveOnly
 
-#define RELAY_LOCK_DISABLED          0
-#define RELAY_LOCK_OFF               1
-#define RELAY_LOCK_ON                2
+#define RELAY_MQTT_DISCONNECT_NONE    PayloadStatus::Unknown
+#define RELAY_MQTT_DISCONNECT_ON      PayloadStatus::On
+#define RELAY_MQTT_DISCONNECT_OFF     PayloadStatus::Off
+#define RELAY_MQTT_DISCONNECT_TOGGLE  PayloadStatus::Toggle
+
+#define RELAY_LOCK_DISABLED          RelayLock::None
+#define RELAY_LOCK_NONE              RelayLock::None
+#define RELAY_LOCK_OFF               RelayLock::Off
+#define RELAY_LOCK_ON                RelayLock::On
 
 //------------------------------------------------------------------------------
 // UDP SYSLOG
@@ -164,6 +161,14 @@
 #define SYSLOG_LOCAL7      (23<<3) /* reserved for local use */
 
 //------------------------------------------------------------------------------
+// Heartbeat
+//------------------------------------------------------------------------------
+
+#define HEARTBEAT_NONE      heartbeat::Mode::None
+#define HEARTBEAT_ONCE      heartbeat::Mode::Once
+#define HEARTBEAT_REPEAT    heartbeat::Mode::Repeat
+
+//------------------------------------------------------------------------------
 // MQTT
 //------------------------------------------------------------------------------
 
@@ -182,16 +187,16 @@
 // LED
 //------------------------------------------------------------------------------
 
-#define LED_MODE_MANUAL             0       // LED will be managed manually (OFF by default)
-#define LED_MODE_WIFI               1       // LED will blink according to the WIFI status
-#define LED_MODE_FOLLOW             2       // LED will follow state of linked LED#_RELAY relay ID
-#define LED_MODE_FOLLOW_INVERSE     3       // LED will follow the opposite state of linked LED#_RELAY relay ID
-#define LED_MODE_FINDME             4       // LED will be ON if all relays are OFF
-#define LED_MODE_FINDME_WIFI        5       // A mixture between WIFI and FINDME
-#define LED_MODE_ON                 6       // LED always ON
-#define LED_MODE_OFF                7       // LED always OFF
-#define LED_MODE_RELAY              8       // If any relay is ON, LED will be ON, otherwise OFF
-#define LED_MODE_RELAY_WIFI         9       // A mixture between WIFI and RELAY, the reverse of MIXED
+#define LED_MODE_MANUAL             LedMode::Manual         // LED will be managed manually (OFF by default)
+#define LED_MODE_WIFI               LedMode::WiFi           // LED will blink according to the WIFI status
+#define LED_MODE_FOLLOW             LedMode::Follow         // LED will follow state of linked LED#_RELAY relay ID
+#define LED_MODE_FOLLOW_INVERSE     LedMode::FollowInverse  // LED will follow the opposite state of linked LED#_RELAY relay ID
+#define LED_MODE_FINDME             LedMode::FindMe         // LED will be ON if all relays are OFF
+#define LED_MODE_FINDME_WIFI        LedMode::FindMeWiFi     // A mixture between WIFI and FINDME
+#define LED_MODE_ON                 LedMode::On             // LED always ON
+#define LED_MODE_OFF                LedMode::Off            // LED always OFF
+#define LED_MODE_RELAY              LedMode::Relay          // If any relay is ON, LED will be ON, otherwise OFF
+#define LED_MODE_RELAY_WIFI         LedMode::RelayWiFi      // A mixture between WIFI and RELAY, the reverse of MIXED
 
 // -----------------------------------------------------------------------------
 // UI
@@ -218,6 +223,7 @@
 // SCHEDULER
 // -----------------------------------------------------------------------------
 
+#define SCHEDULER_TYPE_NONE         0
 #define SCHEDULER_TYPE_SWITCH       1
 #define SCHEDULER_TYPE_DIM          2
 #define SCHEDULER_TYPE_CURTAIN      3
@@ -247,23 +253,6 @@
 #define LIGHT_EFFECT_STROBE         2
 #define LIGHT_EFFECT_FADE           3
 #define LIGHT_EFFECT_SMOOTH         4
-
-//------------------------------------------------------------------------------
-// RESET
-//------------------------------------------------------------------------------
-
-#define CUSTOM_RESET_HARDWARE       1       // Reset from hardware button
-#define CUSTOM_RESET_WEB            2       // Reset from web interface
-#define CUSTOM_RESET_TERMINAL       3       // Reset from terminal
-#define CUSTOM_RESET_MQTT           4       // Reset via MQTT
-#define CUSTOM_RESET_RPC            5       // Reset via RPC (HTTP)
-#define CUSTOM_RESET_OTA            6       // Reset after successful OTA update
-#define CUSTOM_RESET_HTTP           7       // Reset via HTTP GET
-#define CUSTOM_RESET_NOFUSS         8       // Reset after successful NOFUSS update
-#define CUSTOM_RESET_UPGRADE        9       // Reset after update from web interface
-#define CUSTOM_RESET_FACTORY        10      // Factory reset from terminal
-
-#define CUSTOM_RESET_MAX            10
 
 //------------------------------------------------------------------------------
 // ENVIRONMENTAL
@@ -336,6 +325,7 @@
 #define SENSOR_HDC1080_ID           40
 #define SENSOR_PZEM004TV30_ID       41
 #define SENSOR_BME680_ID            42
+#define SENSOR_SM300D2_ID           43
 
 //--------------------------------------------------------------------------------
 // Magnitudes
@@ -379,8 +369,10 @@
 #define MAGNITUDE_IAQ_ACCURACY      34
 #define MAGNITUDE_IAQ_STATIC        35
 #define MAGNITUDE_VOC               36
+#define MAGNITUDE_TVOC              37
+#define MAGNITUDE_CH2O              38
 
-#define MAGNITUDE_MAX               38
+#define MAGNITUDE_MAX               39
 
 #define SENSOR_ERROR_OK             0       // No error
 #define SENSOR_ERROR_OUT_OF_RANGE   1       // Result out of sensor range

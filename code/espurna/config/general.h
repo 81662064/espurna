@@ -1,4 +1,4 @@
-//------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Do not change this file unless you know what you are doing
 // To override user configuration, please see custom.h
 //------------------------------------------------------------------------------
@@ -33,12 +33,28 @@
 #endif
 
 //------------------------------------------------------------------------------
+// HEARTBEAT
+//------------------------------------------------------------------------------
+
+#ifndef HEARTBEAT_MODE
+#define HEARTBEAT_MODE              HEARTBEAT_REPEAT
+#endif
+
+#ifndef HEARTBEAT_INTERVAL
+#define HEARTBEAT_INTERVAL          300     // Interval between heartbeat messages
+#endif
+
+//------------------------------------------------------------------------------
 // DEBUG
 //------------------------------------------------------------------------------
 
+// Set global logger mode. One of:
+// - DebugLogMode::Enabled
+// - DebugLogMode::Disabled
+// - DebugLogMode::SkipBoot
+
 #ifndef DEBUG_LOG_MODE
-#define DEBUG_LOG_MODE          DebugLogMode::Enabled   // Set global logger mode. One of:
-                                                        // ::Enabled, ::Disabled or ::SkipBoot
+#define DEBUG_LOG_MODE                  DebugLogMode::Enabled
 #endif
 
 // Serial debug log
@@ -156,7 +172,7 @@
 #endif
 
 #ifndef TELNET_SERVER_ASYNC_BUFFERED
-#define TELNET_SERVER_ASYNC_BUFFERED         0  // Enable buffered output for telnet server (+1Kb)
+#define TELNET_SERVER_ASYNC_BUFFERED         1  // Enable buffered output for telnet server (+1Kb)
                                                 // Helps to avoid lost data with lwip2 TCP_MSS=536 option
 #endif
 
@@ -235,12 +251,12 @@
 #define GARLAND_SUPPORT             0
 #endif
 
-#ifndef GARLAND_D_PIN
-#define GARLAND_D_PIN               D2          // WS2812 pin number
+#ifndef GARLAND_DATA_PIN
+#define GARLAND_DATA_PIN            4           // WS2812 data pin (default: D2 / GPIO4)
 #endif
 
 #ifndef GARLAND_LEDS
-#define GARLAND_LEDS                60          // Leds number
+#define GARLAND_LEDS                60          // Number of LEDs
 #endif
 
 //------------------------------------------------------------------------------
@@ -267,30 +283,9 @@
 #endif
 
 //------------------------------------------------------------------------------
-// HEARTBEAT
+// HEARTBEAT REPORT
 //------------------------------------------------------------------------------
 
-#define HEARTBEAT_NONE              0           // Never send heartbeat
-#define HEARTBEAT_ONCE              1           // Send it only once upon MQTT connection
-#define HEARTBEAT_REPEAT            2           // Send it upon MQTT connection and every HEARTBEAT_INTERVAL
-#define HEARTBEAT_REPEAT_STATUS     3           // Send it upon MQTT connection and every HEARTBEAT_INTERVAL only STATUS report
-
-// Backwards compatibility check
-#if defined(HEARTBEAT_ENABLED) && (HEARTBEAT_ENABLED == 0)
-#define HEARTBEAT_MODE              HEARTBEAT_NONE
-#endif
-
-#ifndef HEARTBEAT_MODE
-#define HEARTBEAT_MODE              HEARTBEAT_REPEAT
-#endif
-
-#ifndef HEARTBEAT_INTERVAL
-#define HEARTBEAT_INTERVAL          300UL         // Interval between heartbeat messages (in sec)
-#endif
-
-#define UPTIME_OVERFLOW             4294967295UL  // Uptime overflow value
-
-// Values that will be reported in heartbeat
 #ifndef HEARTBEAT_REPORT_STATUS
 #define HEARTBEAT_REPORT_STATUS     1
 #endif
@@ -364,11 +359,11 @@
 #endif
 
 #ifndef HEARTBEAT_REPORT_RANGE
-#define HEARTBEAT_REPORT_RANGE         THERMOSTAT_SUPPORT
+#define HEARTBEAT_REPORT_RANGE         1
 #endif
 
 #ifndef HEARTBEAT_REPORT_REMOTE_TEMP
-#define HEARTBEAT_REPORT_REMOTE_TEMP   THERMOSTAT_SUPPORT
+#define HEARTBEAT_REPORT_REMOTE_TEMP   1
 #endif
 
 #ifndef HEARTBEAT_REPORT_BSSID
@@ -381,6 +376,93 @@
 
 #ifndef LOADAVG_INTERVAL
 #define LOADAVG_INTERVAL        30000           // Interval between calculating load average (in ms)
+#endif
+
+//------------------------------------------------------------------------------
+// RELAY
+//------------------------------------------------------------------------------
+
+// Enable general support for relays (aka switches)
+#ifndef RELAY_SUPPORT
+#define RELAY_SUPPORT                   1
+#endif
+
+// ESP01-relays with STM co-MCU driving the relays
+#ifndef RELAY_PROVIDER_STM_SUPPORT
+#define RELAY_PROVIDER_STM_SUPPORT      0
+#endif
+
+// Sonoff Dual, using serial protocol
+#ifndef RELAY_PROVIDER_DUAL_SUPPORT
+#define RELAY_PROVIDER_DUAL_SUPPORT     0
+#endif
+
+// Default boot mode: 0 means OFF, 1 ON and 2 whatever was before
+#ifndef RELAY_BOOT_MODE
+#define RELAY_BOOT_MODE             RELAY_BOOT_OFF
+#endif
+
+// One of RELAY_SYNC_ANY, RELAY_SYNC_NONE_OR_ONE, RELAY_SYNC_SAME or RELAY_SYNC_FIRST
+// Default to ANY i.e. don't do anything
+#ifndef RELAY_SYNC
+#define RELAY_SYNC                  RELAY_SYNC_ANY
+#endif
+
+// 0 (ms) means EVERY relay switches as soon as possible
+// otherwise, wait up until this much time before changing the status
+#ifndef RELAY_DELAY_INTERLOCK
+#define RELAY_DELAY_INTERLOCK       0
+#endif
+
+// Default pulse mode / normal mode. Switching from it will start the 'pulse' timer and reset the relay back after it finishes
+#ifndef RELAY_PULSE_MODE
+#define RELAY_PULSE_MODE            RELAY_PULSE_NONE
+#endif
+
+// Default pulse time in seconds
+#ifndef RELAY_PULSE_TIME
+#define RELAY_PULSE_TIME            0.0
+#endif
+
+// Relay requests flood protection window - in seconds
+#ifndef RELAY_FLOOD_WINDOW
+#define RELAY_FLOOD_WINDOW          3.0
+#endif
+
+// Allowed actual relay changes inside requests flood protection window
+#ifndef RELAY_FLOOD_CHANGES
+#define RELAY_FLOOD_CHANGES         5
+#endif
+
+// Pulse with in milliseconds for a latched relay
+#ifndef RELAY_LATCHING_PULSE
+#define RELAY_LATCHING_PULSE        10
+#endif
+
+// Do not save relay state after these many milliseconds
+#ifndef RELAY_SAVE_DELAY
+#define RELAY_SAVE_DELAY            1000
+#endif
+
+// Configure the MQTT payload for ON, OFF and TOGGLE
+#ifndef RELAY_MQTT_OFF
+#define RELAY_MQTT_OFF              "0"
+#endif
+
+#ifndef RELAY_MQTT_ON
+#define RELAY_MQTT_ON               "1"
+#endif
+
+#ifndef RELAY_MQTT_TOGGLE
+#define RELAY_MQTT_TOGGLE           "2"
+#endif
+
+#ifndef RELAY_MQTT_TOPIC_MODE
+#define RELAY_MQTT_TOPIC_MODE       RELAY_MQTT_TOPIC_NORMAL
+#endif
+
+#ifndef RELAY_MQTT_DISCONNECT_STATUS
+#define RELAY_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_NONE
 #endif
 
 //------------------------------------------------------------------------------
@@ -450,113 +532,50 @@
 #define LED_SUPPORT                 1
 #endif
 
-//------------------------------------------------------------------------------
-// RELAY
-//------------------------------------------------------------------------------
-
-// Enable general support for relays (aka switches)
-#ifndef RELAY_SUPPORT
-#define RELAY_SUPPORT                   1
-#endif
-
-// ESP01-relays with STM co-MCU driving the relays
-#ifndef RELAY_PROVIDER_STM_SUPPORT
-#define RELAY_PROVIDER_STM_SUPPORT      0
-#endif
-
-// Sonoff Dual, using serial protocol
-#ifndef RELAY_PROVIDER_DUAL_SUPPORT
-#define RELAY_PROVIDER_DUAL_SUPPORT     0
-#endif
-
-// Default boot mode: 0 means OFF, 1 ON and 2 whatever was before
-#ifndef RELAY_BOOT_MODE
-#define RELAY_BOOT_MODE             RELAY_BOOT_OFF
-#endif
-
-// One of RELAY_SYNC_ANY, RELAY_SYNC_NONE_OR_ONE, RELAY_SYNC_SAME or RELAY_SYNC_FIRST
-// Default to ANY i.e. don't do anything
-#ifndef RELAY_SYNC
-#define RELAY_SYNC                  RELAY_SYNC_ANY
-#endif
-
-// 0 (ms) means EVERY relay switches as soon as possible
-// otherwise, wait up until this much time before changing the status
-#ifndef RELAY_DELAY_INTERLOCK
-#define RELAY_DELAY_INTERLOCK       0
-#endif
-
-// Default pulse mode: 0 means no pulses, 1 means normally off, 2 normally on
-#ifndef RELAY_PULSE_MODE
-#define RELAY_PULSE_MODE            RELAY_PULSE_NONE
-#endif
-
-// Default pulse time in seconds
-#ifndef RELAY_PULSE_TIME
-#define RELAY_PULSE_TIME            1.0
-#endif
-
-// Relay requests flood protection window - in seconds
-#ifndef RELAY_FLOOD_WINDOW
-#define RELAY_FLOOD_WINDOW          3.0
-#endif
-
-// Allowed actual relay changes inside requests flood protection window
-#ifndef RELAY_FLOOD_CHANGES
-#define RELAY_FLOOD_CHANGES         5
-#endif
-
-// Pulse with in milliseconds for a latched relay
-#ifndef RELAY_LATCHING_PULSE
-#define RELAY_LATCHING_PULSE        10
-#endif
-
-// Do not save relay state after these many milliseconds
-#ifndef RELAY_SAVE_DELAY
-#define RELAY_SAVE_DELAY            1000
-#endif
-
-#ifndef RELAY_REPORT_STATUS
-#define RELAY_REPORT_STATUS         1
-#endif
-
-// Configure the MQTT payload for ON, OFF and TOGGLE
-#ifndef RELAY_MQTT_OFF
-#define RELAY_MQTT_OFF              "0"
-#endif
-
-#ifndef RELAY_MQTT_ON
-#define RELAY_MQTT_ON               "1"
-#endif
-
-#ifndef RELAY_MQTT_TOGGLE
-#define RELAY_MQTT_TOGGLE           "2"
-#endif
-
 // -----------------------------------------------------------------------------
 // WIFI
 // -----------------------------------------------------------------------------
 
-#ifndef WIFI_CONNECT_TIMEOUT
-#define WIFI_CONNECT_TIMEOUT        60000                  // Connecting timeout for WIFI in ms
+#ifndef WIFI_CONNECT_RETRIES
+#define WIFI_CONNECT_RETRIES        3                      // Number of times before changing to the next configured network
+#endif
+
+#ifndef WIFI_CONNECT_INTERVAL
+#define WIFI_CONNECT_INTERVAL       3000                   // Time (ms) between connection attempts
 #endif
 
 #ifndef WIFI_RECONNECT_INTERVAL
-#define WIFI_RECONNECT_INTERVAL     180000                 // If could not connect to WIFI, retry after this time in ms
+#define WIFI_RECONNECT_INTERVAL     120000                 // When all retries on all networks are exhausted, wait for this time (ms) and start from the beginning
 #endif
 
 #ifndef WIFI_MAX_NETWORKS
-#define WIFI_MAX_NETWORKS           5                      // Max number of WIFI connection configurations
+#define WIFI_MAX_NETWORKS           5                      // Maximum number of WiFi configurations in settings
 #endif
 
-#ifndef WIFI_AP_CAPTIVE
-#define WIFI_AP_CAPTIVE             1                      // Captive portal enabled when in AP mode
+#ifndef WIFI_AP_CAPTIVE_SUPPORT
+#define WIFI_AP_CAPTIVE_SUPPORT     1                      // Captive portal for AP mode
+#endif
+
+#ifndef WIFI_AP_CAPTIVE_ENABLED
+#define WIFI_AP_CAPTIVE_ENABLED     1                      // Enabled by default
+#endif
+
+#ifndef WIFI_STA_MODE
+#define WIFI_STA_MODE               wifi::StaMode::Enabled  // By default, turn on STA interface and try to connect to configured networks
+                                                            // - wifi::StaMode::Enabled (default)
+                                                            // - wifi::StaMode::Disabled keeps STA disabled
 #endif
 
 #ifndef WIFI_AP_MODE
-#define WIFI_AP_MODE                WiFiApMode::Fallback   // By default, fallback to AP mode if no STA connection
-                                                           // Use WiFiApMode::Enabled to start it when the device boots
-                                                           // Use WiFiApMode::Disabled to disable AP mode completely
+#define WIFI_AP_MODE                wifi::ApMode::Fallback  // By default, enable AP if there is no STA connection
+                                                            // - wifi::ApMode::Fallback (default)
+                                                            // - wifi::ApMode::Enabled keeps AP enabled independent of STA
+                                                            // - wifi::ApMode::Disabled keeps AP disabled
+#endif
+
+#ifndef WIFI_FALLBACK_TIMEOUT
+#define WIFI_FALLBACK_TIMEOUT       60000                  // When AP is in FALLBACK mode and STA is connected,
+                                                           // how long to wait until stopping the AP
 #endif
 
 #ifndef WIFI_AP_SSID
@@ -569,9 +588,8 @@
                                                            // By default or when empty, admin password is used instead.
 #endif
 
-#ifndef WIFI_AP_LEASES_SUPPORT
-#define WIFI_AP_LEASES_SUPPORT      0                      // (optional) Specify softAp MAC<->IP DHCP reservations
-                                                           // Use `set wifiApLease# MAC`, where MAC is a valid 12-byte HEX number without colons
+#ifndef WIFI_AP_CHANNEL
+#define WIFI_AP_CHANNEL             1                      // Which WiFi channel to use for softAP.
 #endif
 
 #ifndef WIFI_SLEEP_MODE
@@ -579,136 +597,21 @@
 #endif
 
 #ifndef WIFI_SCAN_NETWORKS
-#define WIFI_SCAN_NETWORKS          1                      // Perform a network scan before connecting
+#define WIFI_SCAN_NETWORKS              1                  // Perform a network scan before connecting and when RSSI threshold is reached
+                                                           // Configured networks are used in order.
 #endif
 
-// Optional hardcoded configuration (up to 5 networks, depending on WIFI_MAX_NETWORKS and espurna/wifi_config.h)
-#ifndef WIFI1_SSID
-#define WIFI1_SSID                  ""
+#ifndef WIFI_SCAN_RSSI_THRESHOLD
+#define WIFI_SCAN_RSSI_THRESHOLD        -73                // Consider current network for a reconnection cycle
+                                                           // when it's RSSI value is below the specified threshold
 #endif
 
-#ifndef WIFI1_PASS
-#define WIFI1_PASS                  ""
+#ifndef WIFI_SCAN_RSSI_CHECKS
+#define WIFI_SCAN_RSSI_CHECKS           3                  // Amount of RSSI threshold checks before starting a scan
 #endif
 
-#ifndef WIFI1_IP
-#define WIFI1_IP                    ""
-#endif
-
-#ifndef WIFI1_GW
-#define WIFI1_GW                    ""
-#endif
-
-#ifndef WIFI1_MASK
-#define WIFI1_MASK                  ""
-#endif
-
-#ifndef WIFI1_DNS
-#define WIFI1_DNS                   ""
-#endif
-
-#ifndef WIFI2_SSID
-#define WIFI2_SSID                  ""
-#endif
-
-#ifndef WIFI2_PASS
-#define WIFI2_PASS                  ""
-#endif
-
-#ifndef WIFI2_IP
-#define WIFI2_IP                    ""
-#endif
-
-#ifndef WIFI2_GW
-#define WIFI2_GW                    ""
-#endif
-
-#ifndef WIFI2_MASK
-#define WIFI2_MASK                  ""
-#endif
-
-#ifndef WIFI2_DNS
-#define WIFI2_DNS                   ""
-#endif
-
-#ifndef WIFI3_SSID
-#define WIFI3_SSID                  ""
-#endif
-
-#ifndef WIFI3_PASS
-#define WIFI3_PASS                  ""
-#endif
-
-#ifndef WIFI3_IP
-#define WIFI3_IP                    ""
-#endif
-
-#ifndef WIFI3_GW
-#define WIFI3_GW                    ""
-#endif
-
-#ifndef WIFI3_MASK
-#define WIFI3_MASK                  ""
-#endif
-
-#ifndef WIFI3_DNS
-#define WIFI3_DNS                   ""
-#endif
-
-#ifndef WIFI4_SSID
-#define WIFI4_SSID                  ""
-#endif
-
-#ifndef WIFI4_PASS
-#define WIFI4_PASS                  ""
-#endif
-
-#ifndef WIFI4_IP
-#define WIFI4_IP                    ""
-#endif
-
-#ifndef WIFI4_GW
-#define WIFI4_GW                    ""
-#endif
-
-#ifndef WIFI4_MASK
-#define WIFI4_MASK                  ""
-#endif
-
-#ifndef WIFI4_DNS
-#define WIFI4_DNS                   ""
-#endif
-
-#ifndef WIFI5_SSID
-#define WIFI5_SSID                  ""
-#endif
-
-#ifndef WIFI5_PASS
-#define WIFI5_PASS                  ""
-#endif
-
-#ifndef WIFI5_IP
-#define WIFI5_IP                    ""
-#endif
-
-#ifndef WIFI5_GW
-#define WIFI5_GW                    ""
-#endif
-
-#ifndef WIFI5_MASK
-#define WIFI5_MASK                  ""
-#endif
-
-#ifndef WIFI5_DNS
-#define WIFI5_DNS                   ""
-#endif
-
-#ifndef WIFI_RSSI_1M
-#define WIFI_RSSI_1M                -30         // Calibrate it with your router reading the RSSI at 1m
-#endif
-
-#ifndef WIFI_PROPAGATION_CONST
-#define WIFI_PROPAGATION_CONST      4           // This is typically something between 2.7 to 4.3 (free space is 2)
+#ifndef WIFI_SCAN_RSSI_CHECK_INTERVAL
+#define WIFI_SCAN_RSSI_CHECK_INTERVAL   60000              // Time (ms) between RSSI checks
 #endif
 
 // ref: https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/kconfig.html#config-lwip-esp-gratuitous-arp
@@ -793,8 +696,8 @@
 #define WS_AUTHENTICATION           1           // WS authentication ON by default (see #507)
 #endif
 
-#ifndef WS_BUFFER_SIZE
-#define WS_BUFFER_SIZE              5           // Max number of secured websocket connections
+#ifndef WS_MAX_CLIENTS
+#define WS_MAX_CLIENTS              5           // Max number of websocket connections
 #endif
 
 #ifndef WS_TIMEOUT
@@ -847,10 +750,6 @@
 #define MDNS_SERVER_SUPPORT         1           // Publish services using mDNS by default (1.48Kb)
 #endif
 
-#ifndef MDNS_CLIENT_SUPPORT
-#define MDNS_CLIENT_SUPPORT         0           // Resolve mDNS names (3.44Kb)
-#endif
-
 #ifndef LLMNR_SUPPORT
 #define LLMNR_SUPPORT               0           // Publish device using LLMNR protocol by default (1.95Kb) - requires Core version >= 2.4.0
 #endif
@@ -883,12 +782,10 @@
 // -----------------------------------------------------------------------------
 
 #ifndef SECURE_CLIENT
-#define SECURE_CLIENT                          SECURE_CLIENT_NONE     // What variant of WiFiClient to use
+#define SECURE_CLIENT                          SECURE_CLIENT_NONE     // What variant of WiFiClient to use:
                                                                       // SECURE_CLIENT_NONE    - No secure client support (default)
-                                                                      // SECURE_CLIENT_AXTLS   - axTLS client secure support (All Core versions, ONLY TLS 1.1)
-                                                                      // SECURE_CLIENT_BEARSSL - BearSSL client secure support (starting with 2.5.0, TLS 1.2)
-                                                                      //
-                                                                      // axTLS marked for derecation since Arduino Core 2.4.2 and **will** be removed in the future
+                                                                      // SECURE_CLIENT_BEARSSL - BearSSL client secure support (with Core versions newer than 2.5.0, TLS 1.2)
+                                                                      // SECURE_CLIENT_AXTLS   - axTLS client secure support (only with Core versions older than 3.0.0, ONLY TLS 1.1, NOT recommended)
 #endif
 
 // Security check that is performed when the connection is established:
@@ -945,7 +842,7 @@
 #endif
 
 #ifndef OTA_WEB_SUPPORT
-#define OTA_WEB_SUPPORT          1              // Support `/upgrade` endpoint and WebUI OTA handler
+#define OTA_WEB_SUPPORT             WEB_SUPPORT             // Support `/upgrade` endpoint and WebUI OTA handler
 #endif
 
 #define OTA_GITHUB_FP               "CA:06:F5:6B:25:8B:7A:0D:4F:2B:05:47:09:39:47:86:51:15:19:84"
@@ -1132,7 +1029,6 @@
 #define MQTT_KEEPALIVE              120             // MQTT keepalive value
 #endif
 
-
 #ifndef MQTT_RECONNECT_DELAY_MIN
 #define MQTT_RECONNECT_DELAY_MIN    5000            // Try to reconnect in 5 seconds upon disconnection
 #endif
@@ -1188,71 +1084,6 @@
 #define MQTT_ENQUEUE_MESSAGE_ID     1
 #endif
 
-// These particles will be concatenated to the MQTT_TOPIC base to form the actual topic
-#define MQTT_TOPIC_JSON             "data"
-#define MQTT_TOPIC_ACTION           "action"
-#define MQTT_TOPIC_RELAY            "relay"
-#define MQTT_TOPIC_LED              "led"
-#define MQTT_TOPIC_BUTTON           "button"
-#define MQTT_TOPIC_IP               "ip"
-#define MQTT_TOPIC_SSID             "ssid"
-#define MQTT_TOPIC_BSSID            "bssid"
-#define MQTT_TOPIC_VERSION          "version"
-#define MQTT_TOPIC_UPTIME           "uptime"
-#define MQTT_TOPIC_DATETIME         "datetime"
-#define MQTT_TOPIC_TIMESTAMP        "timestamp"
-#define MQTT_TOPIC_FREEHEAP         "freeheap"
-#define MQTT_TOPIC_VCC              "vcc"
-#ifndef MQTT_TOPIC_STATUS
-#define MQTT_TOPIC_STATUS           "status"
-#endif
-#define MQTT_TOPIC_MAC              "mac"
-#define MQTT_TOPIC_RSSI             "rssi"
-#define MQTT_TOPIC_MESSAGE_ID       "id"
-#define MQTT_TOPIC_APP              "app"
-#define MQTT_TOPIC_INTERVAL         "interval"
-#define MQTT_TOPIC_HOSTNAME         "host"
-#define MQTT_TOPIC_DESCRIPTION      "desc"
-#define MQTT_TOPIC_TIME             "time"
-#define MQTT_TOPIC_RFOUT            "rfout"
-#define MQTT_TOPIC_RFIN             "rfin"
-#define MQTT_TOPIC_RFLEARN          "rflearn"
-#define MQTT_TOPIC_RFRAW            "rfraw"
-#define MQTT_TOPIC_UARTIN           "uartin"
-#define MQTT_TOPIC_UARTOUT          "uartout"
-#define MQTT_TOPIC_LOADAVG          "loadavg"
-#define MQTT_TOPIC_BOARD            "board"
-#define MQTT_TOPIC_PULSE            "pulse"
-#define MQTT_TOPIC_SPEED            "speed"
-#define MQTT_TOPIC_IRIN             "irin"
-#define MQTT_TOPIC_IROUT            "irout"
-#define MQTT_TOPIC_OTA              "ota"
-#define MQTT_TOPIC_TELNET_REVERSE   "telnet_reverse"
-#define MQTT_TOPIC_CURTAIN          "curtain"
-#define MQTT_TOPIC_CMD              "cmd"
-
-// Light module
-#define MQTT_TOPIC_LIGHT            "light"
-#define MQTT_TOPIC_CHANNEL          "channel"
-#define MQTT_TOPIC_COLOR_RGB        "rgb"
-#define MQTT_TOPIC_COLOR_HSV        "hsv"
-#define MQTT_TOPIC_ANIM_MODE        "anim_mode"
-#define MQTT_TOPIC_ANIM_SPEED       "anim_speed"
-#define MQTT_TOPIC_BRIGHTNESS       "brightness"
-#define MQTT_TOPIC_MIRED            "mired"
-#define MQTT_TOPIC_KELVIN           "kelvin"
-#define MQTT_TOPIC_TRANSITION       "transition"
-
-// Thermostat module
-#define MQTT_TOPIC_HOLD_TEMP        "hold_temp"
-#define MQTT_TOPIC_HOLD_TEMP_MIN    "min"
-#define MQTT_TOPIC_HOLD_TEMP_MAX    "max"
-#define MQTT_TOPIC_REMOTE_TEMP      "remote_temp"
-#define MQTT_TOPIC_ASK_TEMP_RANGE   "ask_temp_range"
-#define MQTT_TOPIC_NOTIFY_TEMP_RANGE_MIN "notify_temp_range_min"
-#define MQTT_TOPIC_NOTIFY_TEMP_RANGE_MAX "notify_temp_range_max"
-
-
 #ifndef MQTT_STATUS_ONLINE
 #define MQTT_STATUS_ONLINE          "1"         // Value for the device ON message
 #endif
@@ -1272,14 +1103,6 @@
 
 #ifndef MQTT_SETTER
 #define MQTT_SETTER                 "/set"
-#endif
-
-// -----------------------------------------------------------------------------
-// BROKER
-// -----------------------------------------------------------------------------
-
-#ifndef BROKER_SUPPORT
-#define BROKER_SUPPORT          1           // The broker is a poor-man's pubsub manager
 #endif
 
 // -----------------------------------------------------------------------------
@@ -1307,7 +1130,7 @@
 // 5 channels => RGBWW
 
 #ifndef LIGHT_PROVIDER
-#define LIGHT_PROVIDER LIGHT_PROVIDER_NONE
+#define LIGHT_PROVIDER          LIGHT_PROVIDER_NONE
 #endif
 
 #ifndef LIGHT_REPORT_DELAY
@@ -1394,10 +1217,6 @@
 #define LIGHT_USE_GAMMA         0           // Use gamma correction for color channels
 #endif
 
-#ifndef LIGHT_USE_CSS
-#define LIGHT_USE_CSS           1           // Use CSS style to report colors (1=> "#FF0000", 0=> "255,0,0")
-#endif
-
 #ifndef LIGHT_USE_RGB
 #define LIGHT_USE_RGB           0           // Use RGB color selector (1=> RGB, 0=> HSV)
 #endif
@@ -1460,6 +1279,10 @@
 #define HOMEASSISTANT_PREFIX    "homeassistant" // Default MQTT prefix
 #endif
 
+#ifndef HOMEASSISTANT_RETAIN
+#define HOMEASSISTANT_RETAIN    MQTT_RETAIN     // Make broker retain the messages
+#endif
+
 // -----------------------------------------------------------------------------
 // INFLUXDB
 // -----------------------------------------------------------------------------
@@ -1491,7 +1314,6 @@
 #ifndef INFLUXDB_PASSWORD
 #define INFLUXDB_PASSWORD       ""              // Default password
 #endif
-
 
 // -----------------------------------------------------------------------------
 // THINGSPEAK
@@ -1552,11 +1374,16 @@
 #endif // ifndef THINGSPEAK_ADDRESS
 
 #ifndef THINGSPEAK_TRIES
-#define THINGSPEAK_TRIES            3               // Number of tries when sending data (minimum 1)
+#define THINGSPEAK_TRIES            3               // Number of attemps to send the data (minimum 1)
 #endif
 
-#define THINGSPEAK_MIN_INTERVAL     15000           // Minimum interval between POSTs (in millis)
-#define THINGSPEAK_FIELDS           8               // Number of fields
+#ifndef THINGSPEAK_MIN_INTERVAL
+#define THINGSPEAK_MIN_INTERVAL     15000           // Minimum interval between POSTs (ms)
+#endif
+
+#ifndef THINGSPEAK_FIELDS
+#define THINGSPEAK_FIELDS           8               // Maximum number of fields that will be prepared
+#endif
 
 // -----------------------------------------------------------------------------
 // SCHEDULER
@@ -1567,7 +1394,7 @@
 #endif
 
 #ifndef SCHEDULER_MAX_SCHEDULES
-#define SCHEDULER_MAX_SCHEDULES     10              // Max schedules alowed
+#define SCHEDULER_MAX_SCHEDULES     10              // Max schedules allowed
 #endif
 
 #ifndef SCHEDULER_RESTORE_LAST_SCHEDULE
@@ -1603,11 +1430,11 @@
 #endif
 
 #ifndef NTP_SERVER
-#define NTP_SERVER                  "pool.ntp.org"  // Default NTP server
+#define NTP_SERVER                  "pool.ntp.org"  // Default NTP server (string)
 #endif
 
 #ifndef NTP_TIMEZONE
-#define NTP_TIMEZONE                TZ_Etc_UTC      // POSIX TZ variable. Default to UTC from TZ.h (which is PSTR("UTC0"))
+#define NTP_TIMEZONE                TZ_Etc_UTC      // POSIX TZ variable (string). Default to value from, TZ.h which is "UTC0"
                                                     // For the format documentation, see:
                                                     // - https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
                                                     // ESP8266 Core provides human-readable aliases for POSIX format, see:
@@ -1629,6 +1456,10 @@
 #define NTP_WAIT_FOR_SYNC           1               // Do not report any datetime until NTP sync'ed
 #endif
 
+#ifndef NTP_DHCP_SERVER
+#define NTP_DHCP_SERVER             1               // Automatically replace the NTP server value with the one received with the DHCP packet
+#endif
+
 // -----------------------------------------------------------------------------
 // ALEXA
 // -----------------------------------------------------------------------------
@@ -1638,24 +1469,20 @@
 #define ALEXA_SUPPORT               1               // Enable Alexa support by default (10.84Kb)
 #endif
 
-// This is default value for the alexaEnabled setting that defines whether
-// this device should be discoberable and respond to Alexa commands.
-// Both ALEXA_SUPPORT and alexaEnabled should be 1 for Alexa support to work.
 #ifndef ALEXA_ENABLED
-#define ALEXA_ENABLED               1
+#define ALEXA_ENABLED               1               // Start Alexa HTTP server by default
 #endif
 
 #ifndef ALEXA_HOSTNAME
-#define ALEXA_HOSTNAME              ""
+#define ALEXA_HOSTNAME              ""              // Alexa device name. When this value is empty, HOSTNAME will be used.
 #endif
-
 
 // -----------------------------------------------------------------------------
 // RF BRIDGE
 // -----------------------------------------------------------------------------
 
 #ifndef RFB_SUPPORT
-#define RFB_SUPPORT                  0
+#define RFB_SUPPORT                  0               // Enable RFBridge support (disabled by default)
 #endif
 
 #ifndef RFB_SEND_REPEATS
@@ -1847,12 +1674,9 @@
 #endif
 
 // =============================================================================
-// Configuration helpers
+// Configuration helpers to help detect features
 // =============================================================================
 
-//------------------------------------------------------------------------------
-// Provide generic way to detect debugging support
-//------------------------------------------------------------------------------
 #ifndef DEBUG_SUPPORT
 #define DEBUG_SUPPORT ( \
     DEBUG_SERIAL_SUPPORT || \
@@ -1862,3 +1686,10 @@
 )
 #endif
 
+#ifndef FAN_SUPPORT
+#define FAN_SUPPORT IFAN_SUPPORT
+#endif
+
+#ifndef CURTAIN_SUPPORT
+#define CURTAIN_SUPPORT KINGART_CURTAIN_SUPPORT
+#endif

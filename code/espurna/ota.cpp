@@ -4,10 +4,11 @@ OTA MODULE COMMON FUNCTIONS
 
 */
 
+#include "espurna.h"
 #include "ota.h"
+#include "rtcmem.h"
 #include "system.h"
 #include "terminal.h"
-#include "rtcmem.h"
 #include "utils.h"
 #include "ws.h"
 
@@ -23,7 +24,7 @@ void otaPrintError() {
     }
 }
 
-bool otaFinalize(size_t size, int reason, bool evenIfRemaining) {
+bool otaFinalize(size_t size, CustomResetReason reason, bool evenIfRemaining) {
     if (Update.isRunning() && Update.end(evenIfRemaining)) {
         DEBUG_MSG_P(PSTR("[OTA] Success: %7u bytes\n"), size);
         deferredReset(500, reason);
@@ -34,6 +35,10 @@ bool otaFinalize(size_t size, int reason, bool evenIfRemaining) {
     eepromRotate(true);
 
     return false;
+}
+
+bool otaFinalize(size_t size, CustomResetReason reason) {
+    return otaFinalize(size, reason, false);
 }
 
 // Helper methods from UpdaterClass that need to be called manually for async mode,
@@ -82,6 +87,11 @@ void otaProgress(size_t bytes, size_t each) {
     }
 }
 
+void otaProgress(size_t bytes) {
+    constexpr size_t Each { 8192 };
+    otaProgress(bytes, Each);
+}
+
 void otaSetup() {
     // Some magic to allow seamless Tasmota OTA upgrades
     // - inject dummy data sequence that is expected to hold current version info
@@ -106,7 +116,7 @@ void otaSetup() {
         if ((0xA55A == rtcmem[64]) && (0xA55A == rtcmem[68])) {
             DEBUG_MSG_P(PSTR("[OTA] Detected TASMOTA OTA, resetting the device...\n"));
             rtcmem[64] = rtcmem[68] = 0;
-            customResetReason(CUSTOM_RESET_TERMINAL);
+            customResetReason(CustomResetReason::Factory);
             resetSettings();
             eraseSDKConfig();
             *((int*) 0) = 0;
@@ -117,7 +127,10 @@ void otaSetup() {
     }
 
 #if OTA_ARDUINOOTA_SUPPORT
-    arduinoOtaSetup();
+    otaArduinoSetup();
+#endif
+#if !WEB_SUPPORT && OTA_WEB_SUPPORT
+    otaWebSetup();
 #endif
 #if OTA_CLIENT != OTA_CLIENT_NONE
     otaClientSetup();

@@ -4,6 +4,179 @@
 
 #pragma once
 
+// **NOTICE** that erasing settings storage will restore to these values.
+// make sure these are set to some sane defaults that won't break anything
+
+// -----------------------------------------------------------------------------
+// WiFi
+// -----------------------------------------------------------------------------
+
+// (required) SSID must be set for network to be considered enabled.
+// (optional) PASS with some value will require the network to use WPA (or better) authentication, otherwise it must be an OPEN network.
+// (optional) IP, GW, MASK and DNS must all be defined for static configuration to be applied.
+// (optional) BSSID and CHANNEL are only used when WIFI_SCAN_NETWORKS is disabled.
+
+#ifndef WIFI1_SSID
+#define WIFI1_SSID                  ""
+#endif
+
+#ifndef WIFI1_PASS
+#define WIFI1_PASS                  ""
+#endif
+
+#ifndef WIFI1_IP
+#define WIFI1_IP                    ""
+#endif
+
+#ifndef WIFI1_GW
+#define WIFI1_GW                    ""
+#endif
+
+#ifndef WIFI1_MASK
+#define WIFI1_MASK                  ""
+#endif
+
+#ifndef WIFI1_DNS
+#define WIFI1_DNS                   ""
+#endif
+
+#ifndef WIFI1_BSSID
+#define WIFI1_BSSID                 ""
+#endif
+
+#ifndef WIFI1_CHANNEL
+#define WIFI1_CHANNEL               0
+#endif
+
+#ifndef WIFI2_SSID
+#define WIFI2_SSID                  ""
+#endif
+
+#ifndef WIFI2_PASS
+#define WIFI2_PASS                  ""
+#endif
+
+#ifndef WIFI2_IP
+#define WIFI2_IP                    ""
+#endif
+
+#ifndef WIFI2_GW
+#define WIFI2_GW                    ""
+#endif
+
+#ifndef WIFI2_MASK
+#define WIFI2_MASK                  ""
+#endif
+
+#ifndef WIFI2_DNS
+#define WIFI2_DNS                   ""
+#endif
+
+#ifndef WIFI2_BSSID
+#define WIFI2_BSSID                 ""
+#endif
+
+#ifndef WIFI2_CHANNEL
+#define WIFI2_CHANNEL               0
+#endif
+
+#ifndef WIFI3_SSID
+#define WIFI3_SSID                  ""
+#endif
+
+#ifndef WIFI3_PASS
+#define WIFI3_PASS                  ""
+#endif
+
+#ifndef WIFI3_IP
+#define WIFI3_IP                    ""
+#endif
+
+#ifndef WIFI3_GW
+#define WIFI3_GW                    ""
+#endif
+
+#ifndef WIFI3_MASK
+#define WIFI3_MASK                  ""
+#endif
+
+#ifndef WIFI3_DNS
+#define WIFI3_DNS                   ""
+#endif
+
+#ifndef WIFI3_BSSID
+#define WIFI3_BSSID                 ""
+#endif
+
+#ifndef WIFI3_CHANNEL
+#define WIFI3_CHANNEL               0
+#endif
+
+#ifndef WIFI4_SSID
+#define WIFI4_SSID                  ""
+#endif
+
+#ifndef WIFI4_PASS
+#define WIFI4_PASS                  ""
+#endif
+
+#ifndef WIFI4_IP
+#define WIFI4_IP                    ""
+#endif
+
+#ifndef WIFI4_GW
+#define WIFI4_GW                    ""
+#endif
+
+#ifndef WIFI4_MASK
+#define WIFI4_MASK                  ""
+#endif
+
+#ifndef WIFI4_DNS
+#define WIFI4_DNS                   ""
+#endif
+
+#ifndef WIFI4_BSSID
+#define WIFI4_BSSID                 ""
+#endif
+
+#ifndef WIFI4_CHANNEL
+#define WIFI4_CHANNEL               0
+#endif
+
+#ifndef WIFI5_SSID
+#define WIFI5_SSID                  ""
+#endif
+
+#ifndef WIFI5_PASS
+#define WIFI5_PASS                  ""
+#endif
+
+#ifndef WIFI5_IP
+#define WIFI5_IP                    ""
+#endif
+
+#ifndef WIFI5_GW
+#define WIFI5_GW                    ""
+#endif
+
+#ifndef WIFI5_MASK
+#define WIFI5_MASK                  ""
+#endif
+
+#ifndef WIFI5_DNS
+#define WIFI5_DNS                   ""
+#endif
+
+#ifndef WIFI5_BSSID
+#define WIFI5_BSSID                 ""
+#endif
+
+#ifndef WIFI5_CHANNEL
+#define WIFI5_CHANNEL               0
+#endif
+
+
 // -----------------------------------------------------------------------------
 // Buttons
 // -----------------------------------------------------------------------------
@@ -837,6 +1010,156 @@
 #define RELAY8_BOOT_MODE    RELAY_BOOT_MODE
 #endif
 
+#ifndef RELAY1_PULSE_MODE
+#define RELAY1_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY2_PULSE_MODE
+#define RELAY2_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY3_PULSE_MODE
+#define RELAY3_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY4_PULSE_MODE
+#define RELAY4_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY5_PULSE_MODE
+#define RELAY5_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY6_PULSE_MODE
+#define RELAY6_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY7_PULSE_MODE
+#define RELAY7_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+#ifndef RELAY8_PULSE_MODE
+#define RELAY8_PULSE_MODE    RELAY_PULSE_MODE
+#endif
+
+#ifndef RELAY1_PULSE_TIME
+#define RELAY1_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY2_PULSE_TIME
+#define RELAY2_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY3_PULSE_TIME
+#define RELAY3_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY4_PULSE_TIME
+#define RELAY4_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY5_PULSE_TIME
+#define RELAY5_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY6_PULSE_TIME
+#define RELAY6_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY7_PULSE_TIME
+#define RELAY7_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+#ifndef RELAY8_PULSE_TIME
+#define RELAY8_PULSE_TIME    RELAY_PULSE_TIME
+#endif
+
+#ifndef RELAY1_MQTT_TOPIC_SUB
+#define RELAY1_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY2_MQTT_TOPIC_SUB
+#define RELAY2_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY3_MQTT_TOPIC_SUB
+#define RELAY3_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY4_MQTT_TOPIC_SUB
+#define RELAY4_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY5_MQTT_TOPIC_SUB
+#define RELAY5_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY6_MQTT_TOPIC_SUB
+#define RELAY6_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY7_MQTT_TOPIC_SUB
+#define RELAY7_MQTT_TOPIC_SUB    ""
+#endif
+#ifndef RELAY8_MQTT_TOPIC_SUB
+#define RELAY8_MQTT_TOPIC_SUB    ""
+#endif
+
+#ifndef RELAY1_MQTT_TOPIC_PUB
+#define RELAY1_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY2_MQTT_TOPIC_PUB
+#define RELAY2_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY3_MQTT_TOPIC_PUB
+#define RELAY3_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY4_MQTT_TOPIC_PUB
+#define RELAY4_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY5_MQTT_TOPIC_PUB
+#define RELAY5_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY6_MQTT_TOPIC_PUB
+#define RELAY6_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY7_MQTT_TOPIC_PUB
+#define RELAY7_MQTT_TOPIC_PUB    ""
+#endif
+#ifndef RELAY8_MQTT_TOPIC_PUB
+#define RELAY8_MQTT_TOPIC_PUB    ""
+#endif
+
+#ifndef RELAY1_MQTT_TOPIC_MODE
+#define RELAY1_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY2_MQTT_TOPIC_MODE
+#define RELAY2_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY3_MQTT_TOPIC_MODE
+#define RELAY3_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY4_MQTT_TOPIC_MODE
+#define RELAY4_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY5_MQTT_TOPIC_MODE
+#define RELAY5_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY6_MQTT_TOPIC_MODE
+#define RELAY6_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY7_MQTT_TOPIC_MODE
+#define RELAY7_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+#ifndef RELAY8_MQTT_TOPIC_MODE
+#define RELAY8_MQTT_TOPIC_MODE    RELAY_MQTT_TOPIC_MODE
+#endif
+
+#ifndef RELAY1_MQTT_DISCONNECT_STATUS
+#define RELAY1_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY2_MQTT_DISCONNECT_STATUS
+#define RELAY2_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY3_MQTT_DISCONNECT_STATUS
+#define RELAY3_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY4_MQTT_DISCONNECT_STATUS
+#define RELAY4_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY5_MQTT_DISCONNECT_STATUS
+#define RELAY5_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY6_MQTT_DISCONNECT_STATUS
+#define RELAY6_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY7_MQTT_DISCONNECT_STATUS
+#define RELAY7_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+#ifndef RELAY8_MQTT_DISCONNECT_STATUS
+#define RELAY8_MQTT_DISCONNECT_STATUS    RELAY_MQTT_DISCONNECT_STATUS
+#endif
+
 // -----------------------------------------------------------------------------
 // LEDs
 // -----------------------------------------------------------------------------
@@ -945,10 +1268,6 @@
 // Lights
 // -----------------------------------------------------------------------------
 
-#ifndef LIGHT_CHANNELS
-#define LIGHT_CHANNELS      0
-#endif
-
 #ifndef LIGHT_ENABLE_PIN
 #define LIGHT_ENABLE_PIN    GPIO_NONE
 #endif
@@ -991,6 +1310,94 @@
 
 #ifndef LIGHT_CH5_INVERSE
 #define LIGHT_CH5_INVERSE   0
+#endif
+
+// -----------------------------------------------------------------------------
+// my92xx
+// -----------------------------------------------------------------------------
+
+#ifndef MY92XX_CHANNELS
+#define MY92XX_CHANNELS     0
+#endif
+
+#ifndef MY92XX_CH1
+#define MY92XX_CH1          0
+#endif
+
+#ifndef MY92XX_CH2
+#define MY92XX_CH2          1
+#endif
+
+#ifndef MY92XX_CH3
+#define MY92XX_CH3          2
+#endif
+
+#ifndef MY92XX_CH4
+#define MY92XX_CH4          3
+#endif
+
+#ifndef MY92XX_CH5
+#define MY92XX_CH5          4
+#endif
+
+// -----------------------------------------------------------------------------
+// Tuya
+// -----------------------------------------------------------------------------
+
+#ifndef TUYA_CH_STATE_DPID
+#define TUYA_CH_STATE_DPID  0
+#endif
+
+#ifndef TUYA_CH1_DPID
+#define TUYA_CH1_DPID       0
+#endif
+
+#ifndef TUYA_CH2_DPID
+#define TUYA_CH2_DPID       0
+#endif
+
+#ifndef TUYA_CH3_DPID
+#define TUYA_CH3_DPID       0
+#endif
+
+#ifndef TUYA_CH4_DPID
+#define TUYA_CH4_DPID       0
+#endif
+
+#ifndef TUYA_CH5_DPID
+#define TUYA_CH5_DPID       0
+#endif
+
+#ifndef TUYA_SW1_DPID
+#define TUYA_SW1_DPID       0
+#endif
+
+#ifndef TUYA_SW2_DPID
+#define TUYA_SW2_DPID       0
+#endif
+
+#ifndef TUYA_SW3_DPID
+#define TUYA_SW3_DPID       0
+#endif
+
+#ifndef TUYA_SW4_DPID
+#define TUYA_SW4_DPID       0
+#endif
+
+#ifndef TUYA_SW5_DPID
+#define TUYA_SW5_DPID       0
+#endif
+
+#ifndef TUYA_SW6_DPID
+#define TUYA_SW6_DPID       0
+#endif
+
+#ifndef TUYA_SW7_DPID
+#define TUYA_SW7_DPID       0
+#endif
+
+#ifndef TUYA_SW8_DPID
+#define TUYA_SW8_DPID       0
 #endif
 
 // -----------------------------------------------------------------------------

@@ -60,7 +60,6 @@
     // Disable non-core modules
     #define ALEXA_SUPPORT           0
     #define API_SUPPORT             0
-    #define BROKER_SUPPORT          0
     #define DEBUG_SERIAL_SUPPORT    0
     #define DEBUG_TELNET_SUPPORT    0
     #define DEBUG_WEB_SUPPORT       0
@@ -75,11 +74,15 @@
     #define THINGSPEAK_SUPPORT      0
     #define WEB_SUPPORT             0
 
+    #define TELNET_AUTHENTICATION   0
+    #define TELNET_STA              1
+
     // Extra light-weight image
     //#define BUTTON_SUPPORT          0 // don't need / have buttons
     //#define LED_SUPPORT             0 // don't need wifi indicator
     //#define RELAY_SUPPORT           0 // don't need to preserve pin state between resets
-    //#define OTA_ARDUINOOTA_SUPPORT  0 // when only using `ota` command
+    //#define OTA_ARDUINOOTA_SUPPORT  0 // when only using the `ota` command
+    //#define OTA_WEB_SUPPORT         0 //
     //#define MDNS_SERVER_SUPPORT     0 //
     //#define TELNET_SUPPORT          0 // when only using espota.py
     //#define TERMINAL_SUPPORT        0 //
@@ -96,7 +99,6 @@
     // Disable non-core modules
     #define ALEXA_SUPPORT           0
     #define API_SUPPORT             0
-    #define BROKER_SUPPORT          0
     #define DOMOTICZ_SUPPORT        0
     #define DEBUG_SERIAL_SUPPORT    0
     //#define DEBUG_TELNET_SUPPORT    0
@@ -109,6 +111,10 @@
     #define SENSOR_SUPPORT          0
     #define THINGSPEAK_SUPPORT      0
     //#define WEB_SUPPORT             0
+    #define WEB_FORCE_PASS_CHANGE   0
+
+    #define TELNET_AUTHENTICATION   0
+    #define TELNET_STA              1
 
     // Extra light-weight image
     #define BUTTON_SUPPORT          0
@@ -775,7 +781,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      1
     #define LIGHT_CH1_PIN       12
 
 #elif defined(ITEAD_SONOFF_RFBRIDGE)
@@ -806,10 +811,11 @@
     #define RFB_PROVIDER        RFB_PROVIDER_EFM8BB1
     #endif
 
-    #if RFB_PROVIDER == RFB_PROVIDER_EFM8BB1
-    #define SERIAL_BAUDRATE         19200
+    #ifndef DEBUG_SERIAL_SUPPORT
     #define DEBUG_SERIAL_SUPPORT    0
     #endif
+
+    #define SERIAL_BAUDRATE         19200
 
     // Only used when RFB_PROVIDER is RCSWITCH
     #define RFB_RX_PIN          4
@@ -823,13 +829,20 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      5
+
     #define MY92XX_MODEL        MY92XX_MODEL_MY9231
     #define MY92XX_CHIPS        2
     #define MY92XX_DI_PIN       12
     #define MY92XX_DCKI_PIN     14
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
-    #define MY92XX_MAPPING      4, 3, 5, 0, 1
+
+    #define MY92XX_CHANNELS     5
+    #define MY92XX_CH1          4
+    #define MY92XX_CH2          3
+    #define MY92XX_CH3          5
+    #define MY92XX_CH4          0
+    #define MY92XX_CH5          1
+
     #define LIGHT_WHITE_FACTOR  (0.1)                    // White LEDs are way more bright in the B1
 
 #elif defined(ITEAD_SONOFF_LED)
@@ -844,7 +857,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      2
     #define LIGHT_CH1_PIN       12  // Cold white
     #define LIGHT_CH2_PIN       14  // Warm white
 
@@ -1014,18 +1026,18 @@
     #define IFAN_SUPPORT            1
 
     // These buttons are triggered by the remote
-    // iFan module adds a custom button handler and a special relay controlling the speed
+    // Fan module adds a custom button handler and a special relay controlling the speed
     #define BUTTON1_PIN             0
     #define BUTTON1_CLICK           BUTTON_ACTION_TOGGLE
 
     #define BUTTON2_PIN             9
-    #define BUTTON2_CLICK           BUTTON_ACTION_CUSTOM
+    #define BUTTON2_CLICK           BUTTON_ACTION_FAN_LOW
 
     #define BUTTON3_PIN             10
-    #define BUTTON3_CLICK           BUTTON_ACTION_CUSTOM
+    #define BUTTON3_CLICK           BUTTON_ACTION_FAN_MEDIUM
 
     #define BUTTON4_PIN             14
-    #define BUTTON4_CLICK           BUTTON_ACTION_CUSTOM
+    #define BUTTON4_CLICK           BUTTON_ACTION_FAN_HIGH
 
     // LEDs
     #define LED1_PIN                13
@@ -1242,13 +1254,12 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define MY92XX_MODEL        MY92XX_MODEL_MY9291
     #define MY92XX_CHIPS        1
     #define MY92XX_DI_PIN       13
     #define MY92XX_DCKI_PIN     15
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
-    #define MY92XX_MAPPING      0, 1, 2, 3
+    #define MY92XX_CHANNELS     4
 
 // -----------------------------------------------------------------------------
 // Lyasi LED
@@ -1262,13 +1273,12 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define MY92XX_MODEL        MY92XX_MODEL_MY9291
     #define MY92XX_CHIPS        1
     #define MY92XX_DI_PIN       4
     #define MY92XX_DCKI_PIN     5
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
-    #define MY92XX_MAPPING      0, 1, 2, 3
+    #define MY92XX_CHANNELS     4
 
 // -----------------------------------------------------------------------------
 // LED Controller
@@ -1286,7 +1296,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       5       // GREEN
     #define LIGHT_CH3_PIN       12      // BLUE
@@ -1309,7 +1318,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       5       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1334,7 +1342,6 @@
     #define LED2_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       12      // RED
     #define LIGHT_CH2_PIN       5       // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1359,7 +1366,6 @@
     #define LED2_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       5       // GREEN
     #define LIGHT_CH3_PIN       12      // BLUE
@@ -1387,7 +1393,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      1
     #define LIGHT_CH1_PIN       12      // WHITE
 
 #elif defined(MAGICHOME_ZJ_ESPM_5CH_B_13)
@@ -1407,7 +1412,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1422,7 +1426,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       5       // RED
     #define LIGHT_CH2_PIN       4       // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -1447,7 +1450,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       15      // RED
     #define LIGHT_CH2_PIN       13      // GREEN
     #define LIGHT_CH3_PIN       12      // BLUE
@@ -1464,7 +1466,6 @@
     #define SERIAL_RX_ENABLED   1
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       12      // RED
     #define LIGHT_CH2_PIN       14      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1810,7 +1811,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      2
     #define LIGHT_CH1_PIN       0
     #define LIGHT_CH2_PIN       2
 
@@ -1826,7 +1826,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      3
     #define LIGHT_CH1_PIN       5       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1839,7 +1838,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       12      // RED
     #define LIGHT_CH2_PIN       5       // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1853,7 +1851,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       5       // GREEN
     #define LIGHT_CH3_PIN       12      // BLUE
@@ -1872,7 +1869,6 @@
     #define BUTTON1_RELAY       1
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -1887,7 +1883,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       5       // RED
     #define LIGHT_CH2_PIN       4       // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -1902,13 +1897,12 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define MY92XX_MODEL        MY92XX_MODEL_MY9291
     #define MY92XX_CHIPS        1
     #define MY92XX_DI_PIN       13
     #define MY92XX_DCKI_PIN     15
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
-    #define MY92XX_MAPPING      0, 1, 2, 3
+    #define MY92XX_CHANNELS     4
 
 // -----------------------------------------------------------------------------
 // XENON SM-PW701U
@@ -1971,7 +1965,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       13      // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -2002,7 +1995,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      3
     #define LIGHT_CH1_PIN       15       // RED
     #define LIGHT_CH2_PIN       12       // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -3630,7 +3622,6 @@
     #define LED2_MODE                   LED_MODE_RELAY
 
     // Light
-    #define LIGHT_CHANNELS              3
     #define LIGHT_CH1_PIN               14       // RED
     #define LIGHT_CH2_PIN               13       // GREEN
     #define LIGHT_CH3_PIN               12      // BLUE
@@ -3672,7 +3663,6 @@
     #define LED2_MODE                   LED_MODE_RELAY
 
     // Light
-    #define LIGHT_CHANNELS              3
     #define LIGHT_CH1_PIN               4        // RED
     #define LIGHT_CH2_PIN               12       // GREEN
     #define LIGHT_CH3_PIN               14       // BLUE
@@ -3871,13 +3861,13 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define MY92XX_MODEL        MY92XX_MODEL_MY9231
     #define MY92XX_CHIPS        2
     #define MY92XX_DI_PIN       13
     #define MY92XX_DCKI_PIN     15
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
-    #define MY92XX_MAPPING      0, 1, 2, 3, 4
+    #define MY92XX_CHANNELS     5
+
     #define LIGHT_WHITE_FACTOR  (0.1)                    // White LEDs are way more bright in the B1
 
 // https://www.amazon.com/gp/product/B07T7W7ZMW
@@ -3890,7 +3880,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       5       // RED
     #define LIGHT_CH2_PIN       4       // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -3907,7 +3896,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       4       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -3945,7 +3933,6 @@
     // Light
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
     #define LIGHT_STEP          8
-    #define LIGHT_CHANNELS      2
     #define LIGHT_CH1_PIN       5   // warm white
     #define LIGHT_CH2_PIN       4   // cold white
 
@@ -3975,7 +3962,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      3
     #define LIGHT_CH1_PIN       4       // RED
     #define LIGHT_CH2_PIN       14      // GREEN
     #define LIGHT_CH3_PIN       12      // BLUE
@@ -3993,7 +3979,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       12      // RED
     #define LIGHT_CH2_PIN       5       // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -4012,7 +3997,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -4031,7 +4015,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       4       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -4049,7 +4032,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      2
     #define LIGHT_CH1_PIN       12      // WARM WHITE
     #define LIGHT_CH2_PIN       14      // COLD WHITE
 
@@ -4065,7 +4047,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       5        // RED
     #define LIGHT_CH2_PIN       4        // GREEN
     #define LIGHT_CH3_PIN       13       // BLUE
@@ -4085,7 +4066,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       12      // RED
     #define LIGHT_CH2_PIN       15      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -4103,14 +4083,16 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define MY92XX_MODEL        MY92XX_MODEL_MY9291
     #define MY92XX_CHIPS        1
     #define MY92XX_DI_PIN       4
     #define MY92XX_DCKI_PIN     5
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
+    #define MY92XX_CHANNELS     2
+
     // No RGB on this bulb. Warm white on channel 0, cool white on channel 3
-    #define MY92XX_MAPPING      255, 255, 255, 3, 0
+    #define MY92XX_CH1          3
+    #define MY92XX_CH2          0
 
 // -----------------------------------------------------------------------------
 // Lombex Lux Nova 2 White and Color
@@ -4124,15 +4106,14 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_MY92XX
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define MY92XX_MODEL        MY92XX_MODEL_MY9291
     #define MY92XX_CHIPS        1
     #define MY92XX_DI_PIN       4
     #define MY92XX_DCKI_PIN     5
     #define MY92XX_COMMAND      MY92XX_COMMAND_DEFAULT
+    #define MY92XX_CHANNELS     4
     // RGB on channels 0/1/2, either cool or warm white on channel 3
     // The bulb *should* have cool leds, but could also have warm leds as a common defect
-    #define MY92XX_MAPPING      0, 1, 2, 3
 
 // -----------------------------------------------------------------------------
 // Bestek Smart Plug with 2 USB ports
@@ -4180,7 +4161,6 @@
     // Light RGBW
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       5       // RED
     #define LIGHT_CH2_PIN       14      // GREEN
     #define LIGHT_CH3_PIN       12      // BLUE
@@ -4215,7 +4195,6 @@
 
     // Light
     #define LIGHT_PROVIDER              LIGHT_PROVIDER_DIMMER
-    #define LIGHT_CHANNELS              3
     #define LIGHT_CH1_PIN               0       // RED
     #define LIGHT_CH2_PIN               4       // GREEN
     #define LIGHT_CH3_PIN               2       // BLUE
@@ -4316,14 +4295,20 @@
     #define SERIAL_BAUDRATE         19200
 
     // Relays
-    #define RELAY_PROVIDER_DUAL_SUPPORT 1
+    #define LIGHTFOX_RELAYS         2
 
-    #define RELAY1_PROVIDER         RELAY_PROVIDER_DUAL
-    #define RELAY2_PROVIDER         RELAY_PROVIDER_DUAL
+    // Buttons
+    #define LIGHTFOX_BUTTONS        4
 
-    // No need to include generic GPIO support
-    // "Buttons" are attached to a secondary MCU and RELAY_PROVIDER_DUAL handles that
-    #define BUTTON_PROVIDER_GPIO_SUPPORT    0
+    #define BUTTON1_CLICK           BUTTON_ACTION_TOGGLE
+    #define BUTTON2_CLICK           BUTTON_ACTION_TOGGLE
+    #define BUTTON3_CLICK           BUTTON_ACTION_TOGGLE
+    #define BUTTON4_CLICK           BUTTON_ACTION_TOGGLE
+
+    #define BUTTON1_RELAY           1
+    #define BUTTON2_RELAY           2
+    #define BUTTON3_RELAY           2
+    #define BUTTON4_RELAY           1
 
     // Conflicts with relay operation
     #define DEBUG_SERIAL_SUPPORT            0
@@ -4427,7 +4412,6 @@
     #define LED1_PIN_INVERSE    1
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       5      // RED
     #define LIGHT_CH2_PIN       4      // GREEN
     #define LIGHT_CH3_PIN       12     // BLUE
@@ -4487,6 +4471,13 @@
 
     #define TUYA_SUPPORT        1
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_CUSTOM
+
+    #define LED1_GPIO           14
+
+    #define TUYA_CH_STATE_DPID  1
+    #define TUYA_CH1_DPID       2
+
+    #define DEBUG_SERIAL_SUPPORT    0
 
 // -----------------------------------------------------------------------------
 // Etekcity ESW01-USA
@@ -4616,7 +4607,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       14      // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       13      // BLUE
@@ -4720,8 +4710,6 @@
     #define MANUFACTURER            "KINGART"
     #define DEVICE                  "CURTAIN_SWITCH"
 
-    #define CURTAIN_SUPPORT         1
-
     // LEDs
     #define LED1_PIN                13
     #define LED1_PIN_INVERSE        1
@@ -4745,7 +4733,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light RGBW
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       4       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -4959,7 +4946,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      4
     #define LIGHT_CH1_PIN       4       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -4978,7 +4964,6 @@
     #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      5
     #define LIGHT_CH1_PIN       4       // RED
     #define LIGHT_CH2_PIN       12      // GREEN
     #define LIGHT_CH3_PIN       14      // BLUE
@@ -4997,11 +4982,27 @@
     #define LIGHT_PROVIDER                LIGHT_PROVIDER_DIMMER
 
     // Light
-    #define LIGHT_CHANNELS      2
     #define LIGHT_CH1_PIN                 5       // WARM WHITE LED PWM PIN
     #define LIGHT_CH1_INVERSE             0
     #define LIGHT_CH2_PIN                 4       // COLD WHITE LED PWM PIN
     #define LIGHT_CH2_INVERSE             0
+
+// -----------------------------------------------------------------------------
+// Mirabella Genio White A60
+// https://www.woolworths.com.au/shop/productdetails/877102/mirabella-smart-led-gls-es-9w-cool-white
+// Like https://www.mirabellagenio.com.au/product-range/mirabella-genio-wi-fi-dimmable-9w-led-gls-bulb/ 
+// but in cardboard box, Item # I002604
+// -----------------------------------------------------------------------------
+
+#elif defined(MIRABELLA_GENIO_W_A60)
+
+    // Info
+    #define MANUFACTURER        "MIRABELLA"
+    #define DEVICE              "GENIO_W_A60"
+    #define LIGHT_PROVIDER      LIGHT_PROVIDER_DIMMER
+
+    // Light
+    #define LIGHT_CH1_PIN       14       // WHITE
 
 #else
 

@@ -9,6 +9,16 @@ COMPATIBILITY BETWEEN 2.3.0 and latest versions
 #include "espurna.h"
 
 // -----------------------------------------------------------------------------
+
+inline constexpr bool isEspurnaCore() {
+#if defined(ESPURNA_CORE) || defined(ESPURNA_CORE_WEBUI)
+    return true;
+#else
+    return false;
+#endif
+}
+
+// -----------------------------------------------------------------------------
 // Core version 2.4.2 and higher changed the cont_t structure to a pointer:
 // https://github.com/esp8266/Arduino/commit/5d5ea92a4d004ab009d5f642629946a0cb8893dd#diff-3fa12668b289ccb95b7ab334833a4ba8L35
 // Core version 2.5.0 introduced EspClass helper method:
@@ -77,12 +87,12 @@ long  __attribute__((deprecated("Please avoid using map() with Core 2.3.0"))) ma
 // Proxy min & max same as the latest Arduino.h
 // -----------------------------------------------------------------------------
 
-#if defined(ARDUINO_ESP8266_RELEASE_2_3_0)
-
 #undef min
 #undef max
 #undef _min
 #undef _max
+
+#if defined(ARDUINO_ESP8266_RELEASE_2_3_0)
 
 #include <algorithm>
 
@@ -91,23 +101,27 @@ using std::max;
 using std::isinf;
 using std::isnan;
 
-#define _min(a,b) ({ decltype(a) _a = (a); decltype(b) _b = (b); _a < _b? _a : _b; })
-#define _max(a,b) ({ decltype(a) _a = (a); decltype(b) _b = (b); _a > _b? _a : _b; })
-
 #endif
 
 // -----------------------------------------------------------------------------
-// std::make_unique backport for C++11, since we still use it
+// std::make_unique & std::clamp backports for C++11, since we still use it
 // -----------------------------------------------------------------------------
-#if 201103L >= __cplusplus
+#if __cplusplus <= 201103L
 
 #include <memory>
 namespace std {
-    template<typename T, typename... Args>
-    std::unique_ptr<T> make_unique(Args&&... args) {
-        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-    }
+
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
+
+template <typename T>
+constexpr const T& clamp(const T& value, const T& low, const T& high) {
+    return (value < low) ? low : (high < value) ? high : value;
+}
+
+} // namespace std
 
 #endif
 

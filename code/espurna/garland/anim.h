@@ -37,11 +37,11 @@ protected:
     int         inc;
 
     //brigthness animation (BrA) current initial phase
-    byte        braPhase;
+    byte        braPhase = 0;
     //braPhase change speed
-    byte        braPhaseSpd  = 5;
+    byte        braPhaseSpd  = 8;
     //BrA frequency (spatial)
-    byte        braFreq      = 150;
+    byte        braFreq      = 40;
 
     Color       curColor     = Color(0);
     Color       prevColor    = Color(0);
@@ -68,9 +68,10 @@ protected:
     //glow animation - must be called at the end of each animaton run
     void glowRun();
 
+    //random number helpers for animations
+    static unsigned int rng();
+    static byte         rngb();
+
 private:
     const char* _name;
 };
-
-unsigned int rng();
-byte         rngb();

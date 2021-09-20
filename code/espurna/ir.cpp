@@ -50,6 +50,12 @@ Raw messages:
 
 #if IR_SUPPORT
 
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRsend.h>
+
+#include "ir_button.h"
+
 #include "light.h"
 #include "mqtt.h"
 #include "relay.h"
@@ -80,14 +86,14 @@ Raw messages:
 // MQTT to IR
 #if MQTT_SUPPORT && defined(IR_TX_PIN)
 
-void _irMqttCallback(unsigned int type, const char * topic, const char * payload) {
+void _irMqttCallback(unsigned int type, const char* topic, char* payload) {
 
     if (type == MQTT_CONNECT_EVENT) {
         mqttSubscribe(MQTT_TOPIC_IROUT);
     }
 
     if (type == MQTT_MESSAGE_EVENT) {
-        String t = mqttMagnitude((char *) topic);
+        String t = mqttMagnitude(topic);
 
         // Match topic
         if (t.equals(MQTT_TOPIC_IROUT)) {

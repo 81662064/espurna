@@ -132,6 +132,7 @@
 //#define MAGICHOME_ZJ_WFMN_A_11
 //#define MAGICHOME_ZJ_WFMN_B_11
 //#define MAGICHOME_ZJ_WFMN_C_11
+//#define MIRABELLA_GENIO_W_A60
 //#define MANCAVEMADE_ESPLIVE
 //#define MAXCIO_WDE004
 //#define MAXCIO_WUK007S
@@ -191,7 +192,6 @@
 
 //#define ALEXA_SUPPORT          0
 //#define API_SUPPORT            0
-//#define BROKER_SUPPORT         0
 //#define BUTTON_SUPPORT         0
 //#define DEBUG_SERIAL_SUPPORT   0
 //#define DEBUG_TELNET_SUPPORT   0
@@ -204,11 +204,10 @@
 //#define INFLUXDB_SUPPORT       1
 //#define IR_SUPPORT             1
 //#define LED_SUPPORT            0
-//#define LLMNR_SUPPORT          1  // Only with latest Arduino Core
-//#define MDNS_CLIENT_SUPPORT    1
+//#define LLMNR_SUPPORT          1
 //#define MDNS_SERVER_SUPPORT    0
 //#define MQTT_SUPPORT           0
-//#define NETBIOS_SUPPORT        1  // Only with latest Arduino Core
+//#define NETBIOS_SUPPORT        1
 //#define NOFUSS_SUPPORT         1
 //#define NTP_SUPPORT            0
 //#define OTA_ARDUINOOTA_SUPPORT 1
@@ -262,6 +261,7 @@
 //#define SENSEAIR_SUPPORT       1
 //#define SHT3X_I2C_SUPPORT      1
 //#define SI7021_SUPPORT         1
+//#define SM300D2_SUPPORT        1
 //#define SONAR_SUPPORT          1
 //#define T6613_SUPPORT          1
 //#define THERMOSTAT_SUPPORT     1
